@@ -1,0 +1,31 @@
+{
+  "name": "electron-window-rtc",
+  "version": "0.1.0",
+  "description": "Connect Electron windows with WebRTC.",
+  "main": "./dist/electron-window-rtc-main.mjs",
+  "types": "./dist/src/main/index.d.ts",
+  "author": "Benoît Lahoz <info@benoitlahoz.io>",
+  "license": "MIT",
+  "private": false,
+  "exports": {
+    ".": {
+      "types": "./dist/src/main/index.d.ts",
+      "import": "./dist/electron-window-rtc-main.mjs"
+    },
+    "./renderer": {
+      "types": "./dist/src/main/index.d.ts",
+      "import": "./dist/electron-window-rtc-renderer.mjs"
+    }
+  },
+  "scripts": {
+    "build:main": "vite build --config vite.config.main.mts",
+    "build:renderer": "vite build --config vite.config.renderer.mts",
+    "build": "rimraf ./dist && yarn build:main && yarn build:renderer"
+  },
+  "devDependencies": {
+    "electron": "^34.2.0",
+    "rimraf": "^6.0.1",
+    "vite": "^6.1.0",
+    "vite-plugin-dts": "^4.5.0"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "lib": ["ESNext"],
+    "moduleResolution": "Bundler",
+    "strict": true
+  },
+  "exclude": ["vite.config.main.mts", "vite.config.renderer.mts"]
+}
