@@ -59,6 +59,8 @@ const listenPeerConnection = () => {
 
     peerWindowConnection.on('icegatheringstatechange', (event: EventManagerDTO) => {
       console.log('Ice gathering state change.', event.payload);
+
+      // TODO: Reconnect if left (peer is null) here or in other listener.
     });
 
     peerWindowConnection.on('negotiationneeded', (event: EventManagerDTO) => {
@@ -91,6 +93,8 @@ const listenPeerConnection = () => {
 
     peerWindowConnection.on('peer-left', (event: EventManagerDTO) => {
       console.log('Peer left.', event.payload);
+      peerWindowConnection!.dispose();
+      peerWindowConnection = null;
     });
   }
 };
