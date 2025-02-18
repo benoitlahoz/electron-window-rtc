@@ -2,6 +2,14 @@
   "name": "electron-window-rtc",
   "version": "0.1.0",
   "description": "Connect Electron windows with WebRTC.",
+  "keywords": [
+    "electron",
+    "webrtc",
+    "window",
+    "browser-window",
+    "ipc",
+    "interprocess-communication"
+  ],
   "main": "./dist/electron-window-rtc-main.mjs",
   "types": "./dist/src/main/index.d.ts",
   "author": "Benoît Lahoz <info@benoitlahoz.io>",
