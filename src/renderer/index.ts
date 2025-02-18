@@ -239,10 +239,10 @@ export class WindowRTCPeerConnection extends EventManager {
 
     Ipc.removeListener(WindowRTCChannels.Signal, this._signalCallback);
 
+    this.connection.close();
+
     // Remove connection listeners.
     this.removeWebRTCListeners();
-
-    super.dispose();
 
     Ipc.invoke(WindowRTCChannels.Signal, {
       channel: 'peer-left',
@@ -257,13 +257,15 @@ export class WindowRTCPeerConnection extends EventManager {
           payload: err,
         });
       }
-
-      this.emit('leave', {
-        sender: this.name,
-        receiver: this.peer,
-        payload: undefined,
-      });
     });
+
+    this.emit('leave', {
+      sender: this.name,
+      receiver: this.peer,
+      payload: undefined,
+    });
+
+    super.dispose();
   }
 
   public async addStream(stream: MediaStream): Promise<void> {
@@ -381,6 +383,7 @@ export class WindowRTCPeerConnection extends EventManager {
   }
 
   private handleLeave() {
+    this.connection.close();
     this.removeWebRTCListeners();
 
     this.emit('peer-left', {
