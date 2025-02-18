@@ -14,6 +14,7 @@ defineIpc(window.electron.ipcRenderer);
 let peerWindowConnection: WindowRTCPeerConnection | null = null;
 const videoRef = ref<HTMLVideoElement | undefined>();
 const ratio = ref(window.devicePixelRatio);
+const loading = ref(true);
 
 onMounted(async () => {
   if (peerWindowConnection) {
@@ -22,15 +23,23 @@ onMounted(async () => {
   }
   peerWindowConnection = await WindowRTCPeerConnection.with('sender');
   console.log('Window name:', peerWindowConnection.name);
+  console.log('Peer connection:', peerWindowConnection);
   listenPeerConnection();
+
+  window.onbeforeunload = clean;
 });
 
 onBeforeUnmount(() => {
+  clean();
+});
+
+const clean = () => {
   if (peerWindowConnection) {
     peerWindowConnection.dispose();
     peerWindowConnection = null;
   }
-});
+  window.onbeforeunload = null;
+};
 
 const listenPeerConnection = () => {
   if (peerWindowConnection) {
@@ -75,6 +84,14 @@ const listenPeerConnection = () => {
           video.srcObject = null;
           video.srcObject = stream;
         }
+
+        video.onloadstart = () => {
+          loading.value = true;
+        };
+
+        video.onloadeddata = () => {
+          loading.value = false;
+        };
       }
     });
 
@@ -111,11 +128,38 @@ const listenPeerConnection = () => {
     .flex-1
   .w-full.flex-1
     video(
+      v-show="loading === false",
       ref="videoRef",
       :width="400 * ratio",
       :controls="false",
       :muted="true",
       :autoplay="true",
       :plays-inline="true",
-    ).h-full.relative
+    ).h-full
+    .h-full.w-full.flex.items-center.justify-center(
+      v-show="loading === true"
+    )
+      .loader
 </template>
+
+<style>
+.loader {
+  width: 48px;
+  height: 48px;
+  border: 5px solid #fff;
+  border-bottom-color: #ff3d00;
+  border-radius: 50%;
+  display: inline-block;
+  box-sizing: border-box;
+  animation: rotation 1s linear infinite;
+}
+
+@keyframes rotation {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+</style>
