@@ -209,4 +209,4 @@ windowConnection.on('track', (event: EventManagerDTO) => {
 ## Known Issues
 
 - In the Electron example provided, reloading `Sender` window takes a lot of time for `Receiver` window to reconnect, whereas the `requestOffer` method allows reconnecting quickly on `Receiver` window's reload.
-- Closing and opening again widnows has not been tested: it may invlove some logic in the `main process` to be integrated in `WindowRTCMain`.
+- Closing and opening again windows has not been tested: it may involve some logic in the `main process` to be integrated in `WindowRTCMain`.
