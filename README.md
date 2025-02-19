@@ -186,13 +186,13 @@ windowConnection.on('track', (event: EventManagerDTO) => {
 
 ### Bad
 
-`const stream = canvas.captureStream();` in `Sender` window indices latency in `Receiver` one.
+`const stream = canvas.captureStream();` in `Sender` window induces latency (~30ms) in `Receiver` one. Look at the bottom of `Receiver` window image.
 
 ![alt bad_performance](https://github.com/benoitlahoz/electron-window-rtc/blob/main/assets/electron-demo.jpg)
 
 ### Good
 
-`const stream = canvas.captureStream(240);` in `Sender` window (requesting high framerate) doesn't induce latency.
+`const stream = canvas.captureStream(240);` in `Sender` window (requesting high framerate) doesn't induce latency. Look at the bottom of `Receiver` window image.
 
 ![alt good_performance](https://github.com/benoitlahoz/electron-window-rtc/blob/main/assets/electron-demo-240fps.jpg)
 
