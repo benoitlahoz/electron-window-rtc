@@ -1,6 +1,6 @@
 {
   "name": "electron-window-rtc",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Connect Electron windows with WebRTC.",
   "keywords": [
     "electron",
@@ -25,6 +25,11 @@
       "import": "./dist/electron-window-rtc-renderer.mjs"
     }
   },
+  "files": [
+    "dist/**/*",
+    "package.json",
+    "README.md"
+  ],
   "scripts": {
     "build:main": "vite build --config vite.config.main.mts",
     "build:renderer": "vite build --config vite.config.renderer.mts",
