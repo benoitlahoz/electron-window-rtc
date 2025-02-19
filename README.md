@@ -181,3 +181,22 @@ windowConnection.on('track', (event: EventManagerDTO) => {
   const trackEvent: RTCTrackEvent = event.payload;
 });
 ```
+
+## Performance
+
+### Bad
+
+`const stream = canvas.captureStream();` in `Sender` window indices latency in `Receiver` one.
+
+![alt bad_performance](https://github.com/benoitlahoz/electron-window-rtc/blob/main/assets/electron-demo.jpg)
+
+### Good
+
+`const stream = canvas.captureStream(240);` in `Sender` window (requesting high framerate) doesn't induce latency.
+
+![alt good_performance](https://github.com/benoitlahoz/electron-window-rtc/blob/main/assets/electron-demo-240fps.jpg)
+
+## Known Issues
+
+- In the Electron example provided, reloading `Sender` window takes a lot of time for `Receiver` window to reconnect, whereas the `requestOffer` method allows reconnecting quickly on `Receiver` window's reload.
+- Closing and opening again widnows has not been tested: it may invlove some logic in the `main process` to be integrated in `WindowRTCMain`.
