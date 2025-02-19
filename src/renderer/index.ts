@@ -80,7 +80,7 @@ class EventManager {
     }
   }
 
-  public emit(channel: EventManagerChannel, data: EventManagerDTO): void {
+  protected emit(channel: EventManagerChannel, data: EventManagerDTO): void {
     if (this.listeners['*']) {
       // Emit all events.
       for (const listener of this.listeners['*']) {
@@ -137,7 +137,7 @@ export class WindowRTCPeerConnection extends EventManager {
     return new WindowRTCPeerConnection(self, cleanPeerName);
   }
 
-  private connection: RTCPeerConnection;
+  public readonly connection: RTCPeerConnection;
 
   private _signalCallback: (
     event: IpcRendererEvent,
