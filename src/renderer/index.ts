@@ -22,6 +22,7 @@ interface SdpObject {
 
 type EventManagerChannel = string &
   (
+    | '*'
     | 'icecandidate'
     | 'iceconnectionstatechange'
     | 'icecandidateerror'
@@ -30,6 +31,7 @@ type EventManagerChannel = string &
     | 'signalingstatechange'
     | 'track'
     | 'leave'
+    | 'request-offer'
     | 'sent-offer'
     | 'received-offer'
     | 'received-answer'
@@ -79,6 +81,16 @@ class EventManager {
   }
 
   public emit(channel: EventManagerChannel, data: EventManagerDTO): void {
+    if (this.listeners['*']) {
+      // Emit all events.
+      for (const listener of this.listeners['*']) {
+        listener({
+          channel,
+          ...data,
+        } as any);
+      }
+    }
+
     if (this.listeners[channel]) {
       for (const listener of this.listeners[channel]) {
         listener(data);
@@ -152,82 +164,65 @@ export class WindowRTCPeerConnection extends EventManager {
         });
 
         if (err) {
-          this.emit('error', {
-            sender: this.name,
-            receiver: this.peer,
-            payload: err,
-          });
+          this.dispatch('error', err);
         }
 
-        this.emit('icecandidate', {
-          sender: this.name,
-          receiver: this.peer,
-          payload: event,
-        });
+        this.dispatch('icecandidate', event);
       }
     };
 
-    this.connection.oniceconnectionstatechange = (event: Event) => {
+    this.connection.oniceconnectionstatechange = async (event: Event) => {
       if (
         this.connection.iceConnectionState === 'failed' ||
         this.connection.iceConnectionState === 'disconnected'
       ) {
-        /* possibly reconfigure the connection in some way here */
-        /* then request ICE restart */
+        // FIXME: Called after a long time of disconnection.
+
+        // possibly reconfigure the connection in some way here
+        // then request ICE restart
         this.connection.restartIce();
       }
-      this.emit('iceconnectionstatechange', {
-        sender: this.name,
-        receiver: this.peer,
-        payload: event,
-      });
+
+      this.dispatch('iceconnectionstatechange', event);
     };
 
     this.connection.onicecandidateerror = (
       event: RTCPeerConnectionIceErrorEvent
     ) => {
-      this.emit('icecandidateerror', {
-        sender: this.name,
-        receiver: this.peer,
-        payload: event,
-      });
+      this.dispatch('icecandidateerror', event);
     };
 
-    this.connection.onicegatheringstatechange = (event: Event) => {
-      this.emit('icegatheringstatechange', {
-        sender: this.name,
-        receiver: this.peer,
-        payload: event,
-      });
+    this.connection.onicegatheringstatechange = async (event: Event) => {
+      this.dispatch('icegatheringstatechange', event);
     };
 
-    this.connection.onnegotiationneeded = (event: Event) => {
-      // if (this.connection.signalingState != 'stable') return;
-      this.emit('negotiationneeded', {
-        sender: this.name,
-        receiver: this.peer,
-        payload: event,
-      });
+    this.connection.onnegotiationneeded = async (event: Event) => {
+      this.dispatch('negotiationneeded', event);
     };
 
     this.connection.onsignalingstatechange = (event: Event) => {
-      this.emit('signalingstatechange', {
-        sender: this.name,
-        receiver: this.peer,
-        payload: event,
-      });
+      this.dispatch('signalingstatechange', event);
     };
 
     this.connection.ontrack = (event: RTCTrackEvent) => {
-      this.emit('track', {
-        sender: this.name,
-        receiver: this.peer,
-        payload: event,
-      });
+      this.dispatch('track', event);
     };
   }
 
   public dispose(): void {
+    Ipc.invoke(WindowRTCChannels.Signal, {
+      channel: 'peer-left',
+      sender: this.name,
+      receiver: this.peer,
+      payload: undefined,
+    }).then((err: undefined | Error) => {
+      if (err) {
+        this.dispatch('error', err);
+      }
+    });
+
+    this.dispatch('leave');
+
     // Remove tracks.
     const senders = this.connection.getSenders();
     for (const sender of senders) {
@@ -237,33 +232,13 @@ export class WindowRTCPeerConnection extends EventManager {
       }
     }
 
+    // Remove main process listener.
     Ipc.removeListener(WindowRTCChannels.Signal, this._signalCallback);
-
-    this.connection.close();
 
     // Remove connection listeners.
     this.removeWebRTCListeners();
 
-    Ipc.invoke(WindowRTCChannels.Signal, {
-      channel: 'peer-left',
-      sender: this.name,
-      receiver: this.peer,
-      payload: '',
-    }).then((err: undefined | Error) => {
-      if (err) {
-        this.emit('error', {
-          sender: this.name,
-          receiver: this.peer,
-          payload: err,
-        });
-      }
-    });
-
-    this.emit('leave', {
-      sender: this.name,
-      receiver: this.peer,
-      payload: undefined,
-    });
+    this.connection.close();
 
     super.dispose();
   }
@@ -285,11 +260,7 @@ export class WindowRTCPeerConnection extends EventManager {
     });
 
     if (err) {
-      this.emit('error', {
-        sender: this.name,
-        receiver: this.peer,
-        payload: err,
-      });
+      this.dispatch('error', err);
     }
 
     this.emit('sent-offer', {
@@ -299,11 +270,48 @@ export class WindowRTCPeerConnection extends EventManager {
     });
   }
 
+  public async requestOffer(): Promise<void> {
+    const err = await Ipc.invoke(WindowRTCChannels.Signal, {
+      channel: 'request-offer',
+      sender: this.name,
+      receiver: this.peer,
+    });
+
+    if (err) {
+      this.dispatch('error', err);
+    }
+
+    this.dispatch('request-offer');
+  }
+
   private async signalCallback(
     _event: IpcRendererEvent,
     data: ForwardMessageDTO
   ): Promise<void> {
     switch (data.channel) {
+      case 'request-offer': {
+        const offer = await this.connection.createOffer();
+        this.connection.setLocalDescription(offer);
+
+        const err = await Ipc.invoke(WindowRTCChannels.Signal, {
+          channel: 'offer',
+          sender: this.name,
+          receiver: this.peer,
+          payload: JSON.stringify(offer),
+        });
+
+        if (err) {
+          this.dispatch('error', err);
+        }
+
+        this.emit('sent-offer', {
+          sender: this.name,
+          receiver: this.peer,
+          payload: offer,
+        });
+        break;
+      }
+
       case 'offer': {
         const offer = JSON.parse(data.payload);
         await this.handleOffer(offer);
@@ -330,7 +338,9 @@ export class WindowRTCPeerConnection extends EventManager {
   }
 
   private async handleOffer(offer: SdpObject): Promise<void> {
-    // if (this.connection.signalingState === 'stable') return;
+    if (this.connection.signalingState === 'closed') {
+      return;
+    }
 
     this.connection.setRemoteDescription(offer);
 
@@ -345,52 +355,39 @@ export class WindowRTCPeerConnection extends EventManager {
     });
 
     if (err) {
-      this.emit('error', {
-        sender: this.name,
-        receiver: this.peer,
-        payload: err,
-      });
+      this.dispatch('error', err);
     }
 
-    this.emit('received-offer', {
-      sender: this.name,
-      receiver: this.peer,
-      payload: {
-        offer,
-        answer,
-      },
+    this.dispatch('received-offer', {
+      offer,
+      answer,
     });
   }
 
   private handleAnswer(answer: SdpObject): void {
-    this.connection.setRemoteDescription(answer);
+    if (
+      this.connection.signalingState === 'closed' ||
+      this.connection.signalingState === 'stable'
+    ) {
+      return;
+    }
 
-    this.emit('received-answer', {
-      sender: this.name,
-      receiver: this.peer,
-      payload: answer,
-    });
+    this.connection.setRemoteDescription(answer);
+    this.dispatch('received-answer', answer);
   }
 
   private handleCandidate(candidate: RTCIceCandidate): void {
-    this.connection.addIceCandidate(candidate);
-
-    this.emit('received-candidate', {
-      sender: this.name,
-      receiver: this.peer,
-      payload: candidate,
-    });
+    if (this.connection.iceConnectionState !== 'closed') {
+      this.connection.addIceCandidate(candidate);
+      this.dispatch('received-candidate', candidate);
+    }
   }
 
   private handleLeave() {
-    this.connection.close();
-    this.removeWebRTCListeners();
+    // this.connection.close();
+    // this.removeWebRTCListeners();
 
-    this.emit('peer-left', {
-      sender: this.name,
-      receiver: this.peer,
-      payload: undefined,
-    });
+    this.dispatch('peer-left');
   }
 
   private removeWebRTCListeners(): void {
@@ -399,5 +396,13 @@ export class WindowRTCPeerConnection extends EventManager {
     this.connection.onicecandidateerror = null;
     this.connection.oniceconnectionstatechange = null;
     this.connection.ontrack = null;
+  }
+
+  private dispatch(channel: EventManagerChannel, payload?: any): void {
+    this.emit(channel, {
+      sender: this.name,
+      receiver: this.peer,
+      payload,
+    });
   }
 }
