@@ -18,6 +18,10 @@
   "main": "./dist/electron-window-rtc-main.mjs",
   "types": "./dist/src/main/index.d.ts",
   "author": "Benoît Lahoz <info@benoitlahoz.io>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/benoitlahoz/electron-window-rtc.git"
+  },
   "license": "MIT",
   "private": false,
   "exports": {

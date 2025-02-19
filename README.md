@@ -1,10 +1,20 @@
 # electron-window-rtc
 
+<a href='https://en.wikipedia.org/wiki/Marseille'>
+    <img src="assets/badges/made_with_♥_in-Marseille-cc0040.svg">
+</a>
+
 Inspired by [electron-peer-connection](https://github.com/han-gyeol/electron-peer-connection), `electron-window-rtc` is a zero-dependency package that allows sharing medias between [Electron](https://www.electronjs.org/) windows through [WebRTC](https://webrtc.org/) with (almost) zero-latency, depending on application configuration.
 
 It works by creating a **main process** events hub that acts as a signaling server for the windows through Electron's IPC. Once windows are registered, each **renderer process** creates a `WindowRTCPeerConnection` to another window and begins to send/receive media streams.
 
 This package was primarily released to handle video/canvas manipulation before sending it to a [window rendered offscreen](https://www.electronjs.org/docs/latest/tutorial/offscreen-rendering) passed to the [Syphon framework](https://github.com/Syphon/Syphon-Framework) with same author's [node-syphon](https://github.com/benoitlahoz/node-syphon) package.
+
+### Donate
+
+If you find this package useful, contribute to Open-Source developmenet by donating here! Thank you!
+
+[![paypal](https://img.shields.io/badge/contribute-Paypal-2ea44f)](https://www.paypal.com/donate/?hosted_button_id=C2ABZ3KBUXF92)
 
 ## Install
 
