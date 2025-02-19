@@ -27,7 +27,7 @@ class _WindowRTCMain {
     data: ForwardMessageDTO
   ) => Promise<undefined | Error>;
 
-  constructor(private logger = console) {
+  constructor() {
     if (_WindowRTCMain.instance) return _WindowRTCMain.instance;
 
     // Bind callbacks.
