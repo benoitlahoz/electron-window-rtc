@@ -11,16 +11,27 @@ import type { EventManagerDTO } from '../../../../../src/common/dto';
 
 defineIpc(window.electron.ipcRenderer);
 
+const ipcSend = window.electron.ipcRenderer.send;
+
 let peerWindowConnection: WindowRTCPeerConnection | null = null;
 const canvasRef = ref<HTMLCanvasElement | undefined>();
+let requestId = -1;
 
 onMounted(async () => {
   if (peerWindowConnection) {
     peerWindowConnection.dispose();
     peerWindowConnection = null;
   }
-  peerWindowConnection = await WindowRTCPeerConnection.with('receiver');
+  peerWindowConnection = await WindowRTCPeerConnection.with('Receiver');
   console.log('Window name:', peerWindowConnection.name);
+  ipcSend(
+    'log',
+    JSON.stringify({
+      channel: 'dom-ready',
+      sender: 'Sender',
+      receiver: 'Receiver',
+    }),
+  );
   listenPeerConnection();
 
   const canvas = canvasRef.value;
@@ -29,7 +40,7 @@ onMounted(async () => {
   }
 
   draw();
-  peerWindowConnection.addStream(canvas.captureStream());
+  peerWindowConnection.addStream(canvas.captureStream(240)); // Important: if framerate is left empty latency occurs.
 });
 
 onBeforeUnmount(() => {
@@ -37,64 +48,193 @@ onBeforeUnmount(() => {
     peerWindowConnection.dispose();
     peerWindowConnection = null;
   }
+
+  if (requestId > -1) {
+    cancelAnimationFrame(requestId);
+    requestId = -1;
+  }
 });
 
 const listenPeerConnection = () => {
   if (peerWindowConnection) {
     peerWindowConnection.on('error', (event: EventManagerDTO) => {
-      console.log('Error.', event.payload);
+      console.log('An error occurred.', event.payload);
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'error',
+          sender: event.sender,
+          receiver: event.receiver,
+          payload: event.payload,
+        }),
+      );
     });
 
     peerWindowConnection.on('icecandidate', (event: EventManagerDTO) => {
-      console.log('Ice candidate.', event.payload);
+      console.log('Received ice candidate.');
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'icecandidate',
+          sender: event.sender,
+          receiver: event.receiver,
+        }),
+      );
     });
 
     peerWindowConnection.on('iceconnectionstatechange', (event: EventManagerDTO) => {
-      console.log('Ice connection state change.', event.payload);
+      console.log('Ice connection state change:', event.payload.currentTarget.iceConnectionState);
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'iceconnectionstatechange',
+          sender: event.sender,
+          receiver: event.receiver,
+          payload: event.payload.currentTarget.iceConnectionState,
+        }),
+      );
     });
 
     peerWindowConnection.on('icecandidateerror', (event: EventManagerDTO) => {
-      console.log('Ice candidate error.', event.payload);
+      console.log('Ice candidate error:', event.payload.errorText);
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'icecandidateerror',
+          sender: event.sender,
+          receiver: event.receiver,
+          payload: event.payload.errorText,
+        }),
+      );
     });
 
     peerWindowConnection.on('icegatheringstatechange', (event: EventManagerDTO) => {
-      console.log('Ice gathering state change.', event.payload);
-
-      // TODO: Reconnect if left (peer is null) here or in other listener.
+      console.log('Ice gathering state change:', event.payload.currentTarget.iceGatheringState);
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'icegatheringstatechange',
+          sender: event.sender,
+          receiver: event.receiver,
+          payload: event.payload.currentTarget.iceGatheringState,
+        }),
+      );
     });
 
     peerWindowConnection.on('negotiationneeded', (event: EventManagerDTO) => {
-      console.log('Negotiation needed.', event.payload);
+      console.log('Negotiation needed:', event.payload.currentTarget.signalingState);
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'negotiationneeded',
+          sender: event.sender,
+          receiver: event.receiver,
+          payload: event.payload.currentTarget.signalingState,
+        }),
+      );
     });
 
     peerWindowConnection.on('signalingstatechange', (event: EventManagerDTO) => {
-      console.log('Signaling state change.', event.payload);
+      console.log('Signaling state change:', event.payload.currentTarget.signalingState);
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'signalingstatechange',
+          sender: event.sender,
+          receiver: event.receiver,
+          payload: event.payload.currentTarget.signalingState,
+        }),
+      );
     });
 
     peerWindowConnection.on('track', (event: EventManagerDTO) => {
       console.error('Track should not be added in sender window.', event);
+      ipcSend(
+        'track',
+        JSON.stringify({
+          channel: 'signalingstatechange',
+          sender: event.sender,
+          receiver: event.receiver,
+          payload: new Error('Track should not be added in sender window.'),
+        }),
+      );
+    });
+
+    peerWindowConnection.on('request-offer', (event: EventManagerDTO) => {
+      console.log('Offer was requested.');
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'request-offer',
+          sender: event.sender,
+          receiver: event.receiver,
+        }),
+      );
     });
 
     peerWindowConnection.on('sent-offer', (event: EventManagerDTO) => {
-      console.log('Offer was sent.', event.payload);
+      console.log('Offer was sent.');
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'sent-offer',
+          sender: event.sender,
+          receiver: event.receiver,
+        }),
+      );
     });
 
     peerWindowConnection.on('received-offer', (event: EventManagerDTO) => {
-      console.log('Offer was received, answer was sent.', event.payload);
+      console.log('Offer was received, answer was sent.');
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'received-offer',
+          sender: event.sender,
+          receiver: event.receiver,
+        }),
+      );
     });
 
     peerWindowConnection.on('received-answer', (event: EventManagerDTO) => {
-      console.log('Answer was received.', event.payload);
+      console.log('Answer was received.');
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'received-answer',
+          sender: event.sender,
+          receiver: event.receiver,
+        }),
+      );
     });
 
     peerWindowConnection.on('leave', (event: EventManagerDTO) => {
-      console.log('Self leave.', event.payload);
+      console.log('Self leave with error', event.payload);
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'leave',
+          sender: event.sender,
+          receiver: event.receiver,
+          payload: event.payload,
+        }),
+      );
     });
 
     peerWindowConnection.on('peer-left', (event: EventManagerDTO) => {
-      console.log('Peer left.', event.payload);
-      peerWindowConnection!.dispose();
-      peerWindowConnection = null;
+      console.log('Peer left with error:', event.payload);
+      // peerWindowConnection!.dispose();
+      // peerWindowConnection = null;
+
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'peer-left',
+          sender: event.sender,
+          receiver: event.receiver,
+          payload: event.payload,
+        }),
+      );
     });
   }
 };
@@ -104,7 +244,7 @@ let angle = 0;
 const draw = () => {
   const canvas = canvasRef.value;
   if (!canvas) {
-    throw new Error(`Canvas may not be mounted yet on '${peerWindowConnection!.name}'`);
+    throw new Error(`Canvas may not be mounted.`);
   }
 
   angle = (angle + 1) % 360;
@@ -128,7 +268,7 @@ const draw = () => {
   ctx.font = '12px Verdana';
   ctx.fillText(`${performance.now().toFixed(2)}`, 16, 400 - 16);
 
-  requestAnimationFrame(draw);
+  requestId = requestAnimationFrame(draw);
 };
 </script>
 

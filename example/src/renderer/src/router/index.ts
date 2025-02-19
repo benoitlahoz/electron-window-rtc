@@ -10,6 +10,10 @@ const routes = [
     path: '/receiver',
     component: () => import('@/components/ReceiverWindow.vue'),
   },
+  {
+    path: '/console',
+    component: () => import('@/components/ConsoleWindow.vue'),
+  },
 ];
 
 export const router = createRouter({

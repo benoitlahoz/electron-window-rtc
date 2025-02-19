@@ -17,6 +17,7 @@ body,
     --background: 240 3.4% 23%;
     --foreground: 210 40% 98%;
     --background-dark: 240 3.4% 15%;
+    --background-darker: 240 3.4% 10%;
 
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 241 5% 58%;
@@ -27,7 +28,7 @@ body,
     --border: 240 3.4% 20%;
     --input: 240 3.4% 20%;
 
-    --primary: 210 70% 46%;
+    --primary: 210 70% 70%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
     --secondary: 217.2 32.6% 17.5%;

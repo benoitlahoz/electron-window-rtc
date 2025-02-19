@@ -11,6 +11,8 @@ import type { EventManagerDTO } from '../../../../../src/common/dto';
 
 defineIpc(window.electron.ipcRenderer);
 
+const ipcSend = window.electron.ipcRenderer.send;
+
 let peerWindowConnection: WindowRTCPeerConnection | null = null;
 const videoRef = ref<HTMLVideoElement | undefined>();
 const ratio = ref(window.devicePixelRatio);
@@ -21,12 +23,22 @@ onMounted(async () => {
     peerWindowConnection.dispose();
     peerWindowConnection = null;
   }
-  peerWindowConnection = await WindowRTCPeerConnection.with('sender');
+  peerWindowConnection = await WindowRTCPeerConnection.with('Sender');
   console.log('Window name:', peerWindowConnection.name);
-  console.log('Peer connection:', peerWindowConnection);
+  ipcSend(
+    'log',
+    JSON.stringify({
+      channel: 'dom-ready',
+      sender: 'Receiver',
+      receiver: 'Sender',
+    }),
+  );
+
   listenPeerConnection();
 
-  window.onbeforeunload = clean;
+  await peerWindowConnection.requestOffer();
+
+  // window.onbeforeunload = clean;
 });
 
 onBeforeUnmount(() => {
@@ -38,40 +50,102 @@ const clean = () => {
     peerWindowConnection.dispose();
     peerWindowConnection = null;
   }
-  window.onbeforeunload = null;
 };
 
 const listenPeerConnection = () => {
   if (peerWindowConnection) {
     peerWindowConnection.on('error', (event: EventManagerDTO) => {
-      console.log('Error.', event.payload);
+      console.log('An error occurred.', event.payload);
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'error',
+          sender: event.sender,
+          receiver: event.receiver,
+          payload: event.payload,
+        }),
+      );
     });
 
     peerWindowConnection.on('icecandidate', (event: EventManagerDTO) => {
-      console.log('Ice candidate.', event.payload);
+      console.log('Received ice candidate.');
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'icecandidate',
+          sender: event.sender,
+          receiver: event.receiver,
+        }),
+      );
     });
 
     peerWindowConnection.on('iceconnectionstatechange', (event: EventManagerDTO) => {
-      console.log('Ice connection state change.', event.payload);
+      console.log('Ice connection state change:', event.payload.currentTarget.iceConnectionState);
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'iceconnectionstatechange',
+          sender: event.sender,
+          receiver: event.receiver,
+          payload: event.payload.currentTarget.iceConnectionState,
+        }),
+      );
     });
 
     peerWindowConnection.on('icecandidateerror', (event: EventManagerDTO) => {
-      console.log('Ice candidate error.', event.payload);
+      console.log('Ice candidate error:', event.payload.errorText);
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'icecandidateerror',
+          sender: event.sender,
+          receiver: event.receiver,
+          payload: event.payload.errorText,
+        }),
+      );
     });
 
     peerWindowConnection.on('icegatheringstatechange', (event: EventManagerDTO) => {
-      console.log('Ice gathering state change.', event.payload);
+      console.log('Ice gathering state change:', event.payload.currentTarget.iceGatheringState);
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'icegatheringstatechange',
+          sender: event.sender,
+          receiver: event.receiver,
+          payload: event.payload.currentTarget.iceGatheringState,
+        }),
+      );
     });
 
     peerWindowConnection.on('negotiationneeded', (event: EventManagerDTO) => {
-      console.log('Negotiation needed.', event.payload);
+      console.log('Negotiation needed:', event.payload.currentTarget.signalingState);
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'negotiationneeded',
+          sender: event.sender,
+          receiver: event.receiver,
+          payload: event.payload.currentTarget.signalingState,
+        }),
+      );
     });
 
     peerWindowConnection.on('signalingstatechange', (event: EventManagerDTO) => {
-      console.log('Signaling state change.', event.payload);
+      console.log('Signaling state change:', event.payload.currentTarget.signalingState);
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'signalingstatechange',
+          sender: event.sender,
+          receiver: event.receiver,
+          payload: event.payload.currentTarget.signalingState,
+        }),
+      );
     });
 
     peerWindowConnection.on('track', (event: EventManagerDTO) => {
+      console.log('Track was added.');
       if (peerWindowConnection) {
         const video = videoRef.value;
         if (!video) {
@@ -93,26 +167,92 @@ const listenPeerConnection = () => {
           loading.value = false;
         };
       }
+
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'track',
+          sender: event.sender,
+          receiver: event.receiver,
+        }),
+      );
+    });
+
+    peerWindowConnection.on('request-offer', (event: EventManagerDTO) => {
+      console.log('Offer was requested.');
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'request-offer',
+          sender: event.sender,
+          receiver: event.receiver,
+        }),
+      );
     });
 
     peerWindowConnection.on('sent-offer', (event: EventManagerDTO) => {
-      console.log('Offer was sent.', event.payload);
+      console.log('Offer was sent.');
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'sent-offer',
+          sender: event.sender,
+          receiver: event.receiver,
+        }),
+      );
     });
 
     peerWindowConnection.on('received-offer', (event: EventManagerDTO) => {
-      console.log('Offer was received, answer was sent.', event.payload);
+      console.log('Offer was received, answer was sent.');
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'received-offer',
+          sender: event.sender,
+          receiver: event.receiver,
+        }),
+      );
     });
 
     peerWindowConnection.on('received-answer', (event: EventManagerDTO) => {
-      console.log('Answer was received.', event.payload);
+      console.log('Answer was received.');
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'received-answer',
+          sender: event.sender,
+          receiver: event.receiver,
+        }),
+      );
     });
 
     peerWindowConnection.on('leave', (event: EventManagerDTO) => {
-      console.log('Self leave.', event.payload);
+      console.log('Self leave with error', event.payload);
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'leave',
+          sender: event.sender,
+          receiver: event.receiver,
+          payload: event.payload,
+        }),
+      );
     });
 
     peerWindowConnection.on('peer-left', (event: EventManagerDTO) => {
-      console.log('Peer left.', event.payload);
+      console.log('Peer left with error:', event.payload);
+      // peerWindowConnection!.dispose();
+      // peerWindowConnection = null;
+
+      ipcSend(
+        'log',
+        JSON.stringify({
+          channel: 'peer-left',
+          sender: event.sender,
+          receiver: event.receiver,
+          payload: event.payload,
+        }),
+      );
     });
   }
 };

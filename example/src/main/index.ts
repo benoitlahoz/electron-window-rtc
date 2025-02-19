@@ -1,12 +1,13 @@
-import { app, shell, BrowserWindow } from 'electron';
+import type { IpcMainEvent } from 'electron';
+import { app, shell, BrowserWindow, ipcMain } from 'electron';
 import { join } from 'path';
 import { is } from '@electron-toolkit/utils';
 import icon from '../../resources/icon.png?asset';
 import { WindowRTCMain } from '../../../src/main';
 
-// @ts-ignore Value never read.
 let senderWindow: BrowserWindow;
 let receiverWindow: BrowserWindow;
+let consoleWindow: BrowserWindow;
 
 function createWindow(name: string, route: string): BrowserWindow {
   let win = new BrowserWindow({
@@ -14,8 +15,7 @@ function createWindow(name: string, route: string): BrowserWindow {
     height: 434,
     minWidth: 400,
     minHeight: 434,
-    maxWidth: 400,
-    maxHeight: 434,
+    resizable: false,
     show: false,
     frame: false,
     titleBarStyle: 'hidden',
@@ -34,7 +34,7 @@ function createWindow(name: string, route: string): BrowserWindow {
 
   win.on('ready-to-show', () => {
     win.show();
-    win.webContents.openDevTools();
+    // win.webContents.openDevTools();
   });
 
   win.on('close', () => {
@@ -66,37 +66,53 @@ app.whenReady().then(() => {
     app.quit();
   });
 
-  senderWindow = createWindow('sender', '/');
-  let pos = senderWindow.getPosition();
-  senderWindow.setPosition(pos[0] - 200, pos[1]);
+  // Forward logs.
+  ipcMain.on('log', (_event: IpcMainEvent, data: any) => {
+    const windows = BrowserWindow.getAllWindows();
+    for (const window of windows) {
+      window.webContents.send('log', data);
+    }
+  });
 
-  receiverWindow = createWindow('receiver', '/receiver');
+  consoleWindow = createWindow('console', '/console');
+  let pos = consoleWindow.getPosition();
+  consoleWindow.setResizable(true);
+  consoleWindow.setSize(800, 434, false);
+  consoleWindow.setPosition(pos[0] - 200, pos[1] + 234);
+  consoleWindow.setResizable(false);
+
+  senderWindow = createWindow('Sender', '/');
+  pos = senderWindow.getPosition();
+  senderWindow.setPosition(pos[0] - 200, pos[1] - 200);
+
+  receiverWindow = createWindow('Receiver', '/receiver');
   pos = receiverWindow.getPosition();
-  receiverWindow.setPosition(pos[0] + 200, pos[1]);
+  receiverWindow.setPosition(pos[0] + 200, pos[1] - 200);
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) {
-      senderWindow = createWindow('sender', '/');
-      let pos = senderWindow.getPosition();
-      senderWindow.setPosition(pos[0] - 200, pos[1]);
+      consoleWindow = createWindow('console', '/console');
+      let pos = consoleWindow.getPosition();
+      consoleWindow.setResizable(true);
+      consoleWindow.setSize(800, 434, false);
+      consoleWindow.setPosition(pos[0] - 200, pos[1] + 234);
+      consoleWindow.setResizable(false);
 
-      receiverWindow = createWindow('receiver', '/receiver');
+      senderWindow = createWindow('Sender', '/');
+      pos = senderWindow.getPosition();
+      senderWindow.setPosition(pos[0] - 200, pos[1] - 200);
+
+      receiverWindow = createWindow('Receiver', '/receiver');
       pos = receiverWindow.getPosition();
-      receiverWindow.setPosition(pos[0] + 200, pos[1]);
+      receiverWindow.setPosition(pos[0] + 200, pos[1] - 200);
     }
   });
 });
 
 app.on('before-quit', () => {});
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
 });
-
-// In this file you can include the rest of your app"s specific main process
-// code. You can also put them in separate files and require them here.
