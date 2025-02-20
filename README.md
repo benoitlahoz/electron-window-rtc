@@ -4,6 +4,8 @@
     <img src="assets/badges/made_with_♥_in-Marseille-cc0040.svg">
 </a>
 
+---
+
 Inspired by [electron-peer-connection](https://github.com/han-gyeol/electron-peer-connection), `electron-window-rtc` is a zero-dependency package that allows sharing medias between [Electron](https://www.electronjs.org/) windows through [WebRTC](https://webrtc.org/) with (almost) zero-latency, depending on application configuration.
 
 It works by creating a **main process** events hub that acts as a signaling server for the windows through Electron's IPC. Once windows are registered, each **renderer process** creates a `WindowRTCPeerConnection` to another window and begins to send/receive media streams.
@@ -16,7 +18,45 @@ If you find this package useful, contribute to my Open-Source work by donating h
 
 [![paypal](https://img.shields.io/badge/contribute-Paypal-2ea44f)](https://www.paypal.com/donate/?hosted_button_id=C2ABZ3KBUXF92)
 
+## Table of Contents
+
+---
+
+- [electron-window-rtc](#electron-window-rtc)
+    - [Donate](#donate)
+  - [Table of Contents](#table-of-contents)
+  - [Install](#install)
+  - [Usage](#usage)
+    - [Main process](#main-process)
+    - [Renderer process](#renderer-process)
+      - [Sender](#sender)
+      - [Receiver](#receiver)
+  - [API](#api)
+    - [Main process](#main-process-1)
+      - [`WindowRTCMain.register`](#windowrtcmainregister)
+      - [`WindowRTCMain.unregister`](#windowrtcmainunregister)
+      - [`WindowRTCMain.dispose`](#windowrtcmaindispose)
+    - [Renderer process](#renderer-process-1)
+      - [`defineIpc`](#defineipc)
+      - [`WindowRTCPeerConnection.with`](#windowrtcpeerconnectionwith)
+      - [`windowPeerConnectionInstance.addStream`](#windowpeerconnectioninstanceaddstream)
+      - [`windowPeerConnectionInstance.requestOffer`](#windowpeerconnectioninstancerequestoffer)
+      - [`windowPeerConnectionInstance.on`](#windowpeerconnectioninstanceon)
+      - [`windowPeerConnectionInstance.off`](#windowpeerconnectioninstanceoff)
+      - [`windowPeerConnectionInstance.dispose`](#windowpeerconnectioninstancedispose)
+    - [Events](#events)
+    - [Types](#types)
+      - [`IpcObject`](#ipcobject)
+      - [`WindowRTCEvent`](#windowrtcevent)
+  - [Using `canvas`](#using-canvas)
+    - [Setting `frameRequestRate`](#setting-framerequestrate)
+    - [Without setting `frameRequestRate`](#without-setting-framerequestrate)
+  - [Known Issues](#known-issues)
+  - [License](#license)
+
 ## Install
+
+---
 
 ```sh
 npm i -s electron-window-rtc
@@ -27,6 +67,8 @@ yarn add electron-window-rtc
 ```
 
 ## Usage
+
+---
 
 See [Electron+Vue example](https://github.com/benoitlahoz/electron-window-rtc/tree/main/example) for a complete integration example.
 
@@ -103,31 +145,125 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
 ## API
 
+---
+
 ### Main process
 
-WindowRTCMain.register(name: string, window: BrowserWindow): void
-WindowRTCMain.unregister(name: string): void
-WindowRTCMain.dispose(): void
+Import the singleton.
+
+`import { WindowRTCMain } from 'electron-window-rtc';`
+
+#### `WindowRTCMain.register`
+
+Registers a `BrowserWindow` for message passing with a unique name.
+
+**Parameters**
+
+| Name     | Type            | Default     | Optional |
+| -------- | --------------- | ----------- | -------- |
+| `name`   | `string`        | `undefined` | false    |
+| `window` | `BrowserWindow` | `undefined` | false    |
+
+**Returns** `void`
+**Throws** `Error` if a window with this name or this window has already been registered.
+
+#### `WindowRTCMain.unregister`
+
+Unregister a `BrowserWindow` from message passing.
+
+**Parameters**
+
+| Name   | Type     | Default     | Optional |
+| ------ | -------- | ----------- | -------- |
+| `name` | `string` | `undefined` | false    |
+
+**Returns** `void`
+**Throws** `Error` if a window with this name doesn't exist.
+
+#### `WindowRTCMain.dispose`
+
+Dispose the `WindowRTCMain` singleton by unregistering windows and removing `IpcMain` listeners.
+
+**Returns** `void`
 
 ### Renderer process
 
-public static async with(peer: string): Promise<WindowRTCPeerConnection>
+`import { WindowRTCPeerConnection, defineIpc } from 'electron-window-rtc/renderer';`
 
-public dispose(): void
+#### `defineIpc`
 
-public async addStream(stream: MediaStream): Promise<void>
+Define the global `IpcObject` to use for thiw window for communicating with main process.
 
-public async requestOffer(): Promise<void>
+**Parameters**
 
-public on(
-channel: EventManagerChannel,
-listener: (data: EventManagerDTO) => void
-): void
+| Name  | Type        | Default     | Optional |
+| ----- | ----------- | ----------- | -------- |
+| `ipc` | `IpcObject` | `undefined` | false    |
 
-public off(
-channel: EventManagerChannel,
-listener?: (data: EventManagerDTO) => void
-): void
+**Returns** `void`
+
+#### `WindowRTCPeerConnection.with`
+
+Create a `WindowRTCPeerConnection` with window of given name.
+
+**Parameters**
+
+| Name   | Type     | Default     | Optional |
+| ------ | -------- | ----------- | -------- |
+| `name` | `string` | `undefined` | false    |
+
+**Returns** `Promise<WindowRTCPeerConnection>` An instance of `WindowRTCPeerConnection`.
+**Throws** `Error` if `IpcObject` was not defined with `defineIpc`, or if the window with `name` was not registered, or if this window was not registered.
+
+#### `windowPeerConnectionInstance.addStream`
+
+Add a stream to send to connected window and create an `offer` sent to receiving window.
+
+**Parameters**
+
+| Name     | Type          | Default     | Optional |
+| -------- | ------------- | ----------- | -------- |
+| `stream` | `MediaStream` | `undefined` | false    |
+
+**Returns** `Promise<void>`
+
+#### `windowPeerConnectionInstance.requestOffer`
+
+Request the peer window to send an offer.
+
+**Returns** `Promise<void>`
+
+#### `windowPeerConnectionInstance.on`
+
+Register a listener to `WindowRTCPeerConnection` instance's events.
+
+**Parameters**
+
+| Name       | Type                              | Default     | Optional |
+| ---------- | --------------------------------- | ----------- | -------- |
+| `channel`  | `WindowRTCEventChannel`           | `undefined` | false    |
+| `listener` | `(event: WindowRTCEvent) => void` | `undefined` | false    |
+
+**Returns** `void`
+
+#### `windowPeerConnectionInstance.off`
+
+Unregister a listener or a whole channel from `WindowRTCPeerConnection` instance's events. If `listener` is left undefined, unregisters all listeners for this channel.
+
+**Parameters**
+
+| Name        | Type                              | Default     | Optional |
+| ----------- | --------------------------------- | ----------- | -------- |
+| `channel`   | `WindowRTCEventChannel`           | `undefined` | false    |
+| `listener?` | `(event: WindowRTCEvent) => void` | `undefined` | true     |
+
+**Returns** `void`
+
+#### `windowPeerConnectionInstance.dispose`
+
+Close the connection with the other window and remove all listeners.
+
+**Returns** `void`
 
 ### Events
 
@@ -154,7 +290,7 @@ listener?: (data: EventManagerDTO) => void
 
 ### Types
 
-#### IpcObject
+#### `IpcObject`
 
 Describes the IPC object used by `electron-window-rtc`
 
@@ -173,28 +309,34 @@ interface IpcObject {
 }
 ```
 
-#### WindowRTCEvent
+#### `WindowRTCEvent`
 
 Describes the generic event data sent and received by `WindowRTCPeerConnection`.
 
-**WARNING:** interface name and property keys may change. The reason is that, for internal events, `sender` and `receiver` do not correspond to the actual event. For example, in case of `iceconnectionstatechange` event, the `sender` is actually the local peer receiving the event (self) and receiver is the remote one (`peer`) that is actually not receiving anything.
-
 ```typescript
 interface WindowRTCEvent {
-  sender: string;
-  receiver: string;
+  /**
+   * This window name the event was emitted from.
+   */
+  local: string;
+  /**
+   * Peer window name.
+   */
+  remote: string;
   payload: any;
 }
 
 // Example.
 windowConnection.on('track', (event: WindowRTCEvent) => {
-  const sender: string = event.sender;
-  const receiver: string = event.receiver;
+  const local: string = event.local;
+  const receiveremoter: string = event.remote;
   const trackEvent: RTCTrackEvent = event.payload;
 });
 ```
 
 ## Using `canvas`
+
+---
 
 When using `canvas` to get an image to send to other windows, application should set the `frameRequestRate` parameter of `canvas.captureStream` to a high framerate to avoid latency at the receiver side.
 
@@ -212,5 +354,11 @@ When using `canvas` to get an image to send to other windows, application should
 
 ## Known Issues
 
+---
+
 - In the Electron example provided, reloading `Sender` window takes a lot of time for `Receiver` window to reconnect, whereas the `requestOffer` method allows reconnecting quickly on `Receiver` window's reload.
 - Closing and opening again windows has not been tested: it may involve some logic in the `main process` to be integrated in `WindowRTCMain`.
+
+## License
+
+[MIT](https://github.com/benoitlahoz/electron-window-rtc/blob/main/LICENSE)
