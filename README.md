@@ -198,11 +198,17 @@ windowConnection.on('track', (event: WindowRTCEvent) => {
 
 When using `canvas` to get an image to send to other windows, application should set the `frameRequestRate` parameter of `canvas.captureStream` to a high framerate to avoid latency at the receiver side.
 
+### Setting `frameRequestRate`
+
 ![alt good_performance](https://github.com/benoitlahoz/electron-window-rtc/blob/main/assets/electron-demo-240fps.jpg)
-_`const stream = canvas.captureStream(240);` in `Sender` window doesn't induce latency. Look at the result of `performance.now()` sent by the `Sender`._
+
+**Fig. 1:** _`const stream = canvas.captureStream(240);` in `Sender` window doesn't induce latency. Look at the result of `performance.now()` sent by the `Sender`._
+
+### Withour setting `frameRequestRate`
 
 ![alt bad_performance](https://github.com/benoitlahoz/electron-window-rtc/blob/main/assets/electron-demo.jpg)
-_Without setting `frameRequestRate`: a latency of ~30ms is induced._
+
+**Fig. 2:** _Without setting `frameRequestRate`: a latency of ~30ms is induced._
 
 ## Known Issues
 
