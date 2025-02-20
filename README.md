@@ -55,8 +55,9 @@ import {
   defineIpc,
 } from 'electron-window-rtc/renderer';
 
-// Important: define how to access to IPC object, according to application 'preload' script.
-defineIpc(window.electron.ipcRenderer); // IpcObject interface: see below.
+// Important: define early how to access to IPC object, according to application 'preload' script.
+// The IPC object must at least expose `on`, `removeListener`, `send` and `invoke` methods (see IPCObject below).
+defineIpc(window.electron.ipcRenderer);
 
 document.addEventListener('DOMContentLoaded', (event) => {
   const windowConnection = new WindowRTCPeerConnection('receiver');
@@ -78,8 +79,9 @@ import {
   defineIpc,
 } from 'electron-window-rtc/renderer';
 
-// Important: define how to access to IPC object, according to application 'preload' script.
-defineIpc(window.electron.ipcRenderer); // IpcObject interface: see below.
+// Important: define early how to access to IPC object, according to application 'preload' script.
+// The IPC object must at least expose `on`, `removeListener`, `send` and `invoke` methods (see IPCObject below).
+defineIpc(window.electron.ipcRenderer);
 
 document.addEventListener('DOMContentLoaded', (event) => {
   const windowConnection = new WindowRTCPeerConnection('sender');
@@ -91,7 +93,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     const trackEvent: RTCTrackEvent = event.payload;
     const streams = trackEvent.streams;
     for (const stream of streams) {
-      // For the sake of this example, keep only one stream.
+      // For the sake of this example, keep only one stream, we could also get `streams[0]`.
       video.srcObject = null;
       video.srcObject = stream;
     }
@@ -129,7 +131,7 @@ listener?: (data: EventManagerDTO) => void
 
 ### Events
 
-Events sent by `WindowRTCPeerConnection` conforms to `EventManagerDTO` (see below) with different payloads according to the event emitted.
+`WindowRTCEvent` (see below) sent by `WindowRTCPeerConnection` with different payloads according to the event emitted.
 
 | Channel                    | Payload Type                                              | Emitted                                                     |
 | -------------------------- | --------------------------------------------------------- | ----------------------------------------------------------- |
@@ -171,40 +173,36 @@ interface IpcObject {
 }
 ```
 
-#### EventManagerDTO
+#### WindowRTCEvent
 
 Describes the generic event data sent and received by `WindowRTCPeerConnection`.
 
 **WARNING:** interface name and property keys may change. The reason is that, for internal events, `sender` and `receiver` do not correspond to the actual event. For example, in case of `iceconnectionstatechange` event, the `sender` is actually the local peer receiving the event (self) and receiver is the remote one (`peer`) that is actually not receiving anything.
 
 ```typescript
-interface EventManagerDTO {
+interface WindowRTCEvent {
   sender: string;
   receiver: string;
   payload: any;
 }
 
 // Example.
-windowConnection.on('track', (event: EventManagerDTO) => {
+windowConnection.on('track', (event: WindowRTCEvent) => {
   const sender: string = event.sender;
   const receiver: string = event.receiver;
   const trackEvent: RTCTrackEvent = event.payload;
 });
 ```
 
-## Performance
+## Using `canvas`
 
-### Good
-
-`const stream = canvas.captureStream(240);` in `Sender` window (requesting high framerate) doesn't induce latency. Look at the bottom of `Receiver` window image.
+When using `canvas` to get an image to send to other windows, application should set the `frameRequestRate` parameter of `canvas.captureStream` to a high framerate to avoid latency at the receiver side.
 
 ![alt good_performance](https://github.com/benoitlahoz/electron-window-rtc/blob/main/assets/electron-demo-240fps.jpg)
-
-### Bad
-
-`const stream = canvas.captureStream();` in `Sender` window induces latency (~30ms) in `Receiver` one. Look at the bottom of `Receiver` window image.
+_`const stream = canvas.captureStream(240);` in `Sender` window doesn't induce latency. Look at the result of `performance.now()` sent by the `Sender`._
 
 ![alt bad_performance](https://github.com/benoitlahoz/electron-window-rtc/blob/main/assets/electron-demo.jpg)
+_Without setting `frameRequestRate`: a latency of ~30ms is induced._
 
 ## Known Issues
 
