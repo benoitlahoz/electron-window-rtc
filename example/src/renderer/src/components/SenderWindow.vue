@@ -28,8 +28,8 @@ onMounted(async () => {
     'log',
     JSON.stringify({
       channel: 'dom-ready',
-      sender: 'Sender',
-      receiver: 'Receiver',
+      local: 'Sender',
+      remote: 'Receiver',
     }),
   );
   listenPeerConnection();
@@ -63,8 +63,8 @@ const listenPeerConnection = () => {
         'log',
         JSON.stringify({
           channel: 'error',
-          sender: event.sender,
-          receiver: event.receiver,
+          local: event.local,
+          remote: event.remote,
           payload: event.payload,
         }),
       );
@@ -76,8 +76,8 @@ const listenPeerConnection = () => {
         'log',
         JSON.stringify({
           channel: 'icecandidate',
-          sender: event.sender,
-          receiver: event.receiver,
+          local: event.local,
+          remote: event.remote,
         }),
       );
     });
@@ -88,8 +88,8 @@ const listenPeerConnection = () => {
         'log',
         JSON.stringify({
           channel: 'iceconnectionstatechange',
-          sender: event.sender,
-          receiver: event.receiver,
+          local: event.local,
+          remote: event.remote,
           payload: event.payload.currentTarget.iceConnectionState,
         }),
       );
@@ -101,8 +101,8 @@ const listenPeerConnection = () => {
         'log',
         JSON.stringify({
           channel: 'icecandidateerror',
-          sender: event.sender,
-          receiver: event.receiver,
+          local: event.local,
+          remote: event.remote,
           payload: event.payload.errorText,
         }),
       );
@@ -114,8 +114,8 @@ const listenPeerConnection = () => {
         'log',
         JSON.stringify({
           channel: 'icegatheringstatechange',
-          sender: event.sender,
-          receiver: event.receiver,
+          local: event.local,
+          remote: event.remote,
           payload: event.payload.currentTarget.iceGatheringState,
         }),
       );
@@ -127,8 +127,8 @@ const listenPeerConnection = () => {
         'log',
         JSON.stringify({
           channel: 'negotiationneeded',
-          sender: event.sender,
-          receiver: event.receiver,
+          local: event.local,
+          remote: event.remote,
           payload: event.payload.currentTarget.signalingState,
         }),
       );
@@ -140,22 +140,22 @@ const listenPeerConnection = () => {
         'log',
         JSON.stringify({
           channel: 'signalingstatechange',
-          sender: event.sender,
-          receiver: event.receiver,
+          local: event.local,
+          remote: event.remote,
           payload: event.payload.currentTarget.signalingState,
         }),
       );
     });
 
     peerWindowConnection.on('track', (event: WindowRTCEvent) => {
-      console.error('Track should not be added in sender window.', event);
+      console.error('Track should not be added in local window.', event);
       ipcSend(
         'track',
         JSON.stringify({
           channel: 'signalingstatechange',
-          sender: event.sender,
-          receiver: event.receiver,
-          payload: new Error('Track should not be added in sender window.'),
+          local: event.local,
+          remote: event.remote,
+          payload: new Error('Track should not be added in local window.'),
         }),
       );
     });
@@ -166,8 +166,8 @@ const listenPeerConnection = () => {
         'log',
         JSON.stringify({
           channel: 'request-offer',
-          sender: event.sender,
-          receiver: event.receiver,
+          local: event.local,
+          remote: event.remote,
         }),
       );
     });
@@ -178,8 +178,8 @@ const listenPeerConnection = () => {
         'log',
         JSON.stringify({
           channel: 'sent-offer',
-          sender: event.sender,
-          receiver: event.receiver,
+          local: event.local,
+          remote: event.remote,
         }),
       );
     });
@@ -190,8 +190,8 @@ const listenPeerConnection = () => {
         'log',
         JSON.stringify({
           channel: 'received-offer',
-          sender: event.sender,
-          receiver: event.receiver,
+          local: event.local,
+          remote: event.remote,
         }),
       );
     });
@@ -202,8 +202,8 @@ const listenPeerConnection = () => {
         'log',
         JSON.stringify({
           channel: 'received-answer',
-          sender: event.sender,
-          receiver: event.receiver,
+          local: event.local,
+          remote: event.remote,
         }),
       );
     });
@@ -214,8 +214,8 @@ const listenPeerConnection = () => {
         'log',
         JSON.stringify({
           channel: 'leave',
-          sender: event.sender,
-          receiver: event.receiver,
+          local: event.local,
+          remote: event.remote,
           payload: event.payload,
         }),
       );
@@ -230,8 +230,8 @@ const listenPeerConnection = () => {
         'log',
         JSON.stringify({
           channel: 'peer-left',
-          sender: event.sender,
-          receiver: event.receiver,
+          local: event.local,
+          remote: event.remote,
           payload: event.payload,
         }),
       );

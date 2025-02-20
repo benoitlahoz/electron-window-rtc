@@ -72,9 +72,9 @@ onBeforeUnmount(() => {
       table.w-full.table-fixed
         thead.text-left.text-sm.bg-background-darker.sticky.top-0.h-8
           tr
-            th.pl-4 Self 
+            th.pl-4 Local 
             th Event
-            th Peer
+            th Remote
             th Payload
             th(
               class="w-[100px]"
@@ -85,12 +85,12 @@ onBeforeUnmount(() => {
         table.w-full.table-fixed
           tbody.text-xs 
             tr(
-              v-for="{ reset, time, channel, sender, receiver, payload } in items",
-              :class="{ 'text-primary': sender === 'Receiver', 'bg-background': reset === true }"
+              v-for="{ reset, time, channel, local, remote, payload } in items",
+              :class="{ 'text-primary': local === 'Receiver', 'bg-background': reset === true }"
             )
-              td.pl-4.font-bold {{ sender }}
+              td.pl-4.font-bold {{ local }}
               td {{ channel }}
-              td {{ receiver }}
+              td {{ remote }}
               td {{ payload }}
               td(
                class="w-[100px]"
