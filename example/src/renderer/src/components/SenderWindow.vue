@@ -172,7 +172,7 @@ onBeforeUnmount(() => {
         @click="enableAudio(true)"
       )
         speaker-icon
-  .w-full.flex-1.relative
+  .w-full.flex-1.relative.bg-background-dark
     canvas(
       ref="canvasRef",
       width="400",
@@ -213,7 +213,7 @@ onBeforeUnmount(() => {
   height: 5px;
   outline: none;
   border-radius: 999px;
-  background: hsl(var(--background-dark));
+  background: hsl(var(--background));
 }
 
 .slider:hover {
