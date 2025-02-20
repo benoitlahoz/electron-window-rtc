@@ -37,7 +37,8 @@
   "files": [
     "dist/**/*",
     "package.json",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build:main": "vite build --config vite.config.main.mts",
