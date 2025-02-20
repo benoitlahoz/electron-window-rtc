@@ -23,7 +23,7 @@ interface SdpObject {
 class WindowRTCEventEmitter {
   private listeners: Record<
     WindowRTCEventChannel | string,
-    ((data: WindowRTCEvent) => void)[]
+    ((event: WindowRTCEvent) => void)[]
   > = {};
 
   public dispose(): void {
@@ -34,7 +34,7 @@ class WindowRTCEventEmitter {
 
   public on(
     channel: WindowRTCEventChannel,
-    listener: (data: WindowRTCEvent) => void
+    listener: (event: WindowRTCEvent) => void
   ): void {
     if (!this.listeners[channel]) {
       this.listeners[channel] = [];
@@ -45,7 +45,7 @@ class WindowRTCEventEmitter {
 
   public off(
     channel: WindowRTCEventChannel,
-    listener?: (data: WindowRTCEvent) => void
+    listener?: (event: WindowRTCEvent) => void
   ): void {
     if (this.listeners[channel]) {
       if (listener) {
@@ -60,20 +60,20 @@ class WindowRTCEventEmitter {
     }
   }
 
-  protected emit(channel: WindowRTCEventChannel, data: WindowRTCEvent): void {
+  protected emit(channel: WindowRTCEventChannel, event: WindowRTCEvent): void {
     if (this.listeners['*']) {
       // Emit all events.
       for (const listener of this.listeners['*']) {
         listener({
           channel,
-          ...data,
+          ...event,
         } as any);
       }
     }
 
     if (this.listeners[channel]) {
       for (const listener of this.listeners[channel]) {
-        listener(data);
+        listener(event);
       }
     }
   }
@@ -100,8 +100,8 @@ type WindowRTCEventChannel = string &
   );
 
 export interface WindowRTCEvent {
-  sender: string;
-  receiver: string;
+  local: string;
+  remote: string;
   payload: any;
 }
 
@@ -114,7 +114,7 @@ let Ipc: IpcObject;
  * Defines a global IPC object.
  * @param { IpcObject } ipc The object that will allow Inter-process communication.
  */
-export const defineIpc = (ipc: IpcObject) => {
+export const defineIpc = (ipc: IpcObject): void => {
   Ipc = ipc;
 };
 
@@ -183,9 +183,7 @@ export class WindowRTCPeerConnection extends WindowRTCEventEmitter {
         this.connection.iceConnectionState === 'disconnected'
       ) {
         // FIXME: Called after a long time of disconnection.
-
-        // possibly reconfigure the connection in some way here
-        // then request ICE restart
+        // TODO: Possibly reconfigure the connection in some way here.
         this.connection.restartIce();
       }
 
@@ -269,11 +267,7 @@ export class WindowRTCPeerConnection extends WindowRTCEventEmitter {
       this.dispatch('error', err);
     }
 
-    this.emit('sent-offer', {
-      sender: this.name,
-      receiver: this.peer,
-      payload: offer,
-    });
+    this.dispatch('sent-offer', offer);
   }
 
   public async requestOffer(): Promise<void> {
@@ -311,8 +305,8 @@ export class WindowRTCPeerConnection extends WindowRTCEventEmitter {
         }
 
         this.emit('sent-offer', {
-          sender: this.name,
-          receiver: this.peer,
+          local: this.name,
+          remote: this.peer,
           payload: offer,
         });
         break;
@@ -406,8 +400,8 @@ export class WindowRTCPeerConnection extends WindowRTCEventEmitter {
 
   private dispatch(channel: WindowRTCEventChannel, payload?: any): void {
     this.emit(channel, {
-      sender: this.name,
-      receiver: this.peer,
+      local: this.name,
+      remote: this.peer,
       payload,
     });
   }

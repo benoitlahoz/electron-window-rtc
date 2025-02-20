@@ -65,7 +65,9 @@ class _WindowRTCMain {
     );
 
     if (existing) {
-      throw new Error(`Window with name '${cleanName}' is already registered.`);
+      throw new Error(
+        `A window with name '${cleanName}' is already registered.`
+      );
     }
 
     this.registeredWindows.push({
