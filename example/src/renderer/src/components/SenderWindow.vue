@@ -217,11 +217,11 @@ onBeforeUnmount(() => {
 }
 
 .slider:hover {
-  background: hsl(var(--primary-dark));
+  background: hsl(var(--primary));
 }
 
 .slider:hover.slider::-webkit-slider-thumb {
-  background: hsl(var(--primary)); /* Green background */
+  background: hsl(var(--primary-dark)); /* Green background */
 }
 
 .slider::-webkit-slider-thumb {
