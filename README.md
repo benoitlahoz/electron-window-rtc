@@ -4,8 +4,6 @@
     <img src="assets/badges/made_with_♥_in-Marseille-cc0040.svg">
 </a>
 
----
-
 Inspired by [electron-peer-connection](https://github.com/han-gyeol/electron-peer-connection), `electron-window-rtc` is a zero-dependency package that allows sharing medias between [Electron](https://www.electronjs.org/) windows through [WebRTC](https://webrtc.org/) with (almost) zero-latency, depending on application configuration.
 
 It works by creating a **main process** events hub that acts as a signaling server for the windows through Electron's IPC. Once windows are registered, each **renderer process** creates a `WindowRTCPeerConnection` to another window and begins to send/receive media streams.
@@ -19,8 +17,6 @@ If you find this package useful, contribute to my Open-Source work by donating h
 [![paypal](https://img.shields.io/badge/contribute-Paypal-2ea44f)](https://www.paypal.com/donate/?hosted_button_id=C2ABZ3KBUXF92)
 
 ## Table of Contents
-
----
 
 - [electron-window-rtc](#electron-window-rtc)
     - [Donate](#donate)
@@ -56,8 +52,6 @@ If you find this package useful, contribute to my Open-Source work by donating h
 
 ## Install
 
----
-
 ```sh
 npm i -s electron-window-rtc
 ```
@@ -67,8 +61,6 @@ yarn add electron-window-rtc
 ```
 
 ## Usage
-
----
 
 See [Electron+Vue example](https://github.com/benoitlahoz/electron-window-rtc/tree/main/example) for a complete integration example.
 
@@ -144,8 +136,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
 ```
 
 ## API
-
----
 
 ### Main process
 
@@ -336,8 +326,6 @@ windowConnection.on('track', (event: WindowRTCEvent) => {
 
 ## Using `canvas`
 
----
-
 When using `canvas` to get an image to send to other windows, application should set the `frameRequestRate` parameter of `canvas.captureStream` to a high framerate to avoid latency at the receiver side.
 
 ### Setting `frameRequestRate`
@@ -353,8 +341,6 @@ When using `canvas` to get an image to send to other windows, application should
 **Fig. 2:** _Without setting `frameRequestRate`: a latency of ~30ms is induced._
 
 ## Known Issues
-
----
 
 - In the Electron example provided, reloading `Sender` window takes a lot of time for `Receiver` window to reconnect, whereas the `requestOffer` method allows reconnecting quickly on `Receiver` window's reload.
 - Closing and opening again windows has not been tested: it may involve some logic in the `main process` to be integrated in `WindowRTCMain`.
