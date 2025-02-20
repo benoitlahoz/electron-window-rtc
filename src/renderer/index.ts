@@ -1,6 +1,6 @@
 import type { IpcRendererEvent } from 'electron';
-import { WindowRTCChannels } from '../common/channels';
-import { WindowRTCEvent, ForwardMessageDTO } from '../common/dto';
+import { WindowRTCIpcChannel } from '../common/ipc-channels';
+import { WindowRTCIpcEvent } from '../common/types';
 
 export interface IpcObject {
   on: (
@@ -20,7 +20,66 @@ interface SdpObject {
   type: 'offer' | 'answer';
 }
 
-type EventManagerChannel = string &
+class WindowRTCEventEmitter {
+  private listeners: Record<
+    WindowRTCEventChannel | string,
+    ((data: WindowRTCEvent) => void)[]
+  > = {};
+
+  public dispose(): void {
+    for (const channel in this.listeners) {
+      this.listeners[channel as WindowRTCEventChannel].length = 0;
+    }
+  }
+
+  public on(
+    channel: WindowRTCEventChannel,
+    listener: (data: WindowRTCEvent) => void
+  ): void {
+    if (!this.listeners[channel]) {
+      this.listeners[channel] = [];
+    }
+
+    this.listeners[channel].push(listener);
+  }
+
+  public off(
+    channel: WindowRTCEventChannel,
+    listener?: (data: WindowRTCEvent) => void
+  ): void {
+    if (this.listeners[channel]) {
+      if (listener) {
+        const index = this.listeners[channel].indexOf(listener);
+        if (index >= 0) {
+          this.listeners[channel].splice(index, 1);
+        }
+        return;
+      }
+
+      delete this.listeners[channel];
+    }
+  }
+
+  protected emit(channel: WindowRTCEventChannel, data: WindowRTCEvent): void {
+    if (this.listeners['*']) {
+      // Emit all events.
+      for (const listener of this.listeners['*']) {
+        listener({
+          channel,
+          ...data,
+        } as any);
+      }
+    }
+
+    if (this.listeners[channel]) {
+      for (const listener of this.listeners[channel]) {
+        listener(data);
+      }
+    }
+  }
+}
+
+type WindowRTCEventChannel = string &
   (
     | '*'
     | 'icecandidate'
@@ -40,63 +99,10 @@ type EventManagerChannel = string &
     | 'error'
   );
 
-class EventManager {
-  private listeners: Record<
-    EventManagerChannel | string,
-    ((data: WindowRTCEvent) => void)[]
-  > = {};
-
-  public dispose(): void {
-    for (const channel in this.listeners) {
-      this.listeners[channel as EventManagerChannel].length = 0;
-    }
-  }
-
-  public on(
-    channel: EventManagerChannel,
-    listener: (data: WindowRTCEvent) => void
-  ): void {
-    if (!this.listeners[channel]) {
-      this.listeners[channel] = [];
-    }
-
-    this.listeners[channel].push(listener);
-  }
-
-  public off(
-    channel: EventManagerChannel,
-    listener?: (data: WindowRTCEvent) => void
-  ): void {
-    if (this.listeners[channel]) {
-      if (listener) {
-        const index = this.listeners[channel].indexOf(listener);
-        if (index >= 0) {
-          this.listeners[channel].splice(index, 1);
-        }
-        return;
-      }
-
-      delete this.listeners[channel];
-    }
-  }
-
-  protected emit(channel: EventManagerChannel, data: WindowRTCEvent): void {
-    if (this.listeners['*']) {
-      // Emit all events.
-      for (const listener of this.listeners['*']) {
-        listener({
-          channel,
-          ...data,
-        } as any);
-      }
-    }
-
-    if (this.listeners[channel]) {
-      for (const listener of this.listeners[channel]) {
-        listener(data);
-      }
-    }
-  }
+export interface WindowRTCEvent {
+  sender: string;
+  receiver: string;
+  payload: any;
 }
 
 /**
@@ -112,7 +118,7 @@ export const defineIpc = (ipc: IpcObject) => {
   Ipc = ipc;
 };
 
-export class WindowRTCPeerConnection extends EventManager {
+export class WindowRTCPeerConnection extends WindowRTCEventEmitter {
   public static async with(peer: string): Promise<WindowRTCPeerConnection> {
     if (!Ipc) {
       throw new Error(
@@ -122,12 +128,12 @@ export class WindowRTCPeerConnection extends EventManager {
 
     const cleanPeerName = peer.trim();
 
-    const windows = await Ipc.invoke(WindowRTCChannels.GetRegisteredWindows);
+    const windows = await Ipc.invoke(WindowRTCIpcChannel.GetRegisteredWindows);
     if (!windows.includes(peer)) {
       throw new Error(`Peer window with name '${peer}' was not registered.`);
     }
 
-    const self = await Ipc.invoke(WindowRTCChannels.GetOwnWindowName);
+    const self = await Ipc.invoke(WindowRTCIpcChannel.GetOwnWindowName);
     if (!self) {
       throw new Error(
         `Unable to get own registered window name. Window may not have been properly registered.`
@@ -141,7 +147,7 @@ export class WindowRTCPeerConnection extends EventManager {
 
   private _signalCallback: (
     event: IpcRendererEvent,
-    ata: ForwardMessageDTO
+    ata: WindowRTCIpcEvent
   ) => void;
 
   private constructor(public readonly name: string, private peer: string) {
@@ -150,13 +156,13 @@ export class WindowRTCPeerConnection extends EventManager {
     this.connection = new RTCPeerConnection();
 
     this._signalCallback = this.signalCallback.bind(this);
-    Ipc.on(WindowRTCChannels.Signal, this._signalCallback);
+    Ipc.on(WindowRTCIpcChannel.Signal, this._signalCallback);
 
     this.connection.onicecandidate = async (
       event: RTCPeerConnectionIceEvent
     ) => {
       if (event.candidate) {
-        const err = await Ipc.invoke(WindowRTCChannels.Signal, {
+        const err = await Ipc.invoke(WindowRTCIpcChannel.Signal, {
           channel: 'candidate',
           sender: this.name,
           receiver: this.peer,
@@ -210,7 +216,7 @@ export class WindowRTCPeerConnection extends EventManager {
   }
 
   public dispose(): void {
-    Ipc.invoke(WindowRTCChannels.Signal, {
+    Ipc.invoke(WindowRTCIpcChannel.Signal, {
       channel: 'peer-left',
       sender: this.name,
       receiver: this.peer,
@@ -233,7 +239,7 @@ export class WindowRTCPeerConnection extends EventManager {
     }
 
     // Remove main process listener.
-    Ipc.removeListener(WindowRTCChannels.Signal, this._signalCallback);
+    Ipc.removeListener(WindowRTCIpcChannel.Signal, this._signalCallback);
 
     // Remove connection listeners.
     this.removeWebRTCListeners();
@@ -252,7 +258,7 @@ export class WindowRTCPeerConnection extends EventManager {
 
     this.connection.setLocalDescription(offer);
 
-    const err = await Ipc.invoke(WindowRTCChannels.Signal, {
+    const err = await Ipc.invoke(WindowRTCIpcChannel.Signal, {
       channel: 'offer',
       sender: this.name,
       receiver: this.peer,
@@ -271,7 +277,7 @@ export class WindowRTCPeerConnection extends EventManager {
   }
 
   public async requestOffer(): Promise<void> {
-    const err = await Ipc.invoke(WindowRTCChannels.Signal, {
+    const err = await Ipc.invoke(WindowRTCIpcChannel.Signal, {
       channel: 'request-offer',
       sender: this.name,
       receiver: this.peer,
@@ -286,14 +292,14 @@ export class WindowRTCPeerConnection extends EventManager {
 
   private async signalCallback(
     _event: IpcRendererEvent,
-    data: ForwardMessageDTO
+    data: WindowRTCIpcEvent
   ): Promise<void> {
     switch (data.channel) {
       case 'request-offer': {
         const offer = await this.connection.createOffer();
         this.connection.setLocalDescription(offer);
 
-        const err = await Ipc.invoke(WindowRTCChannels.Signal, {
+        const err = await Ipc.invoke(WindowRTCIpcChannel.Signal, {
           channel: 'offer',
           sender: this.name,
           receiver: this.peer,
@@ -347,7 +353,7 @@ export class WindowRTCPeerConnection extends EventManager {
     const answer = await this.connection.createAnswer();
     await this.connection.setLocalDescription(answer);
 
-    const err = await Ipc.invoke(WindowRTCChannels.Signal, {
+    const err = await Ipc.invoke(WindowRTCIpcChannel.Signal, {
       channel: 'answer',
       sender: this.name,
       receiver: this.peer,
@@ -398,7 +404,7 @@ export class WindowRTCPeerConnection extends EventManager {
     this.connection.ontrack = null;
   }
 
-  private dispatch(channel: EventManagerChannel, payload?: any): void {
+  private dispatch(channel: WindowRTCEventChannel, payload?: any): void {
     this.emit(channel, {
       sender: this.name,
       receiver: this.peer,

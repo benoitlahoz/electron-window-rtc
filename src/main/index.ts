@@ -1,7 +1,7 @@
 import type { BrowserWindow, IpcMainInvokeEvent } from 'electron';
 import { ipcMain } from 'electron';
-import { WindowRTCChannels } from '../common/channels';
-import { ForwardMessageDTO } from '../common/dto';
+import { WindowRTCIpcChannel } from '../common/ipc-channels';
+import { WindowRTCIpcEvent } from '../common/types';
 
 export interface RegisteredWindow {
   name: string;
@@ -19,33 +19,24 @@ class _WindowRTCMain {
    */
   public readonly registeredWindows: RegisteredWindow[] = [];
 
-  // These will receive instance corresponding methods bound to 'this'.
-  private _getOwnNameCallback!: (event: IpcMainInvokeEvent) => Promise<string>;
-  private _getWindowsCallback!: () => Promise<string[]>;
-  private _forwardMessageCallback!: (
-    event: IpcMainInvokeEvent,
-    data: ForwardMessageDTO
-  ) => Promise<undefined | Error>;
-
   constructor() {
     if (_WindowRTCMain.instance) return _WindowRTCMain.instance;
 
-    // Bind callbacks.
-    this._getOwnNameCallback = this.getOwnNameCallback.bind(this);
-    this._getWindowsCallback = this.getWindowsCallback.bind(this);
-    this._forwardMessageCallback = this.forwardMessageCallback.bind(this);
+    // Handle Ipc `invoke` calls.
 
     ipcMain.handle(
-      WindowRTCChannels.GetOwnWindowName,
-      this._getOwnNameCallback
+      WindowRTCIpcChannel.GetOwnWindowName,
+      this.getOwnNameCallback.bind(this)
     );
 
     ipcMain.handle(
-      WindowRTCChannels.GetRegisteredWindows,
-      this._getWindowsCallback
+      WindowRTCIpcChannel.GetRegisteredWindows,
+      this.getWindowsCallback.bind(this)
     );
 
-    ipcMain.handle(WindowRTCChannels.Signal, this._forwardMessageCallback);
+    ipcMain.handle(WindowRTCIpcChannel.Signal, this.signalCallback.bind(this));
+
+    // Singleton instance.
 
     _WindowRTCMain.instance = this;
   }
@@ -54,9 +45,9 @@ class _WindowRTCMain {
    * Dispose the singleton.
    */
   public dispose(): void {
-    ipcMain.removeHandler(WindowRTCChannels.GetOwnWindowName);
-    ipcMain.removeHandler(WindowRTCChannels.GetRegisteredWindows);
-    ipcMain.removeHandler(WindowRTCChannels.Signal);
+    ipcMain.removeHandler(WindowRTCIpcChannel.GetOwnWindowName);
+    ipcMain.removeHandler(WindowRTCIpcChannel.GetRegisteredWindows);
+    ipcMain.removeHandler(WindowRTCIpcChannel.Signal);
     _WindowRTCMain.instance = null;
   }
 
@@ -83,14 +74,8 @@ class _WindowRTCMain {
     });
 
     window.on('close', () => {
-      for (const registered of this.registeredWindows) {
-        registered.window.webContents.send(WindowRTCChannels.Signal, {
-          channel: 'leave',
-          sender: cleanName,
-          receiver: registered.name,
-          payload: undefined,
-        });
-      }
+      // Unregister and inform other windows on 'close' event.
+      this.unregister(cleanName);
     });
   }
 
@@ -111,10 +96,25 @@ class _WindowRTCMain {
       );
     }
 
+    for (const registered of this.registeredWindows) {
+      if (registered.name === cleanName) continue;
+
+      registered.window.webContents.send(WindowRTCIpcChannel.Signal, {
+        channel: 'peer-left',
+        sender: cleanName,
+        receiver: registered.name,
+        payload: undefined,
+      });
+    }
+
     const index = this.registeredWindows.indexOf(existing);
     this.registeredWindows.splice(index, 1);
   }
 
+  /**
+   * Callback for `WindowRTCIpcChannel.GetOwnName`
+   * @returns { Promise<string>} The name of the requesting window.
+   */
   private async getOwnNameCallback(event: IpcMainInvokeEvent): Promise<string> {
     const existing = this.registeredWindows.find(
       (registered: RegisteredWindow) =>
@@ -131,7 +131,7 @@ class _WindowRTCMain {
   }
 
   /**
-   * Callback for `WindowRTCChannels.GetWindows`
+   * Callback for `WindowRTCIpcChannel.GetWindows`
    * @returns { Promise<string[]>} The registered windows names.
    */
   private async getWindowsCallback(): Promise<string[]> {
@@ -140,9 +140,13 @@ class _WindowRTCMain {
     );
   }
 
-  private async forwardMessageCallback(
+  /**
+   * Callback for `WindowRTCIpcChannel.Signal`
+   * @returns { Promise<undefined | Error>} An `Error` if signaling message couldn't be forwarded (window was not found).
+   */
+  private async signalCallback(
     _event: IpcMainInvokeEvent,
-    data: ForwardMessageDTO
+    data: WindowRTCIpcEvent
   ): Promise<undefined | Error> {
     const existing = this.registeredWindows.find(
       (registered: RegisteredWindow) => registered.name === data.receiver
@@ -154,7 +158,7 @@ class _WindowRTCMain {
       );
     }
 
-    existing.window.webContents.send(WindowRTCChannels.Signal, data);
+    existing.window.webContents.send(WindowRTCIpcChannel.Signal, data);
     return;
   }
 }

@@ -1,4 +1,4 @@
-export enum WindowRTCChannels {
+export enum WindowRTCIpcChannel {
   Log = 'electron-window-rtc:log',
   Signal = 'electron-window-rtc:signal',
   GetOwnWindowName = 'electron-window-rtc:registered-window:own-name',
