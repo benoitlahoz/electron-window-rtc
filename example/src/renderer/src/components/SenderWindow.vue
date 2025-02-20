@@ -7,7 +7,7 @@ export default {
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref } from 'vue';
 import { WindowRTCPeerConnection, defineIpc } from '../../../../../src/renderer';
-import type { EventManagerDTO } from '../../../../../src/common/dto';
+import type { WindowRTCEvent } from '../../../../../src/common/dto';
 
 defineIpc(window.electron.ipcRenderer);
 
@@ -57,7 +57,7 @@ onBeforeUnmount(() => {
 
 const listenPeerConnection = () => {
   if (peerWindowConnection) {
-    peerWindowConnection.on('error', (event: EventManagerDTO) => {
+    peerWindowConnection.on('error', (event: WindowRTCEvent) => {
       console.log('An error occurred.', event.payload);
       ipcSend(
         'log',
@@ -70,7 +70,7 @@ const listenPeerConnection = () => {
       );
     });
 
-    peerWindowConnection.on('icecandidate', (event: EventManagerDTO) => {
+    peerWindowConnection.on('icecandidate', (event: WindowRTCEvent) => {
       console.log('Received ice candidate.');
       ipcSend(
         'log',
@@ -82,7 +82,7 @@ const listenPeerConnection = () => {
       );
     });
 
-    peerWindowConnection.on('iceconnectionstatechange', (event: EventManagerDTO) => {
+    peerWindowConnection.on('iceconnectionstatechange', (event: WindowRTCEvent) => {
       console.log('Ice connection state change:', event.payload.currentTarget.iceConnectionState);
       ipcSend(
         'log',
@@ -95,7 +95,7 @@ const listenPeerConnection = () => {
       );
     });
 
-    peerWindowConnection.on('icecandidateerror', (event: EventManagerDTO) => {
+    peerWindowConnection.on('icecandidateerror', (event: WindowRTCEvent) => {
       console.log('Ice candidate error:', event.payload.errorText);
       ipcSend(
         'log',
@@ -108,7 +108,7 @@ const listenPeerConnection = () => {
       );
     });
 
-    peerWindowConnection.on('icegatheringstatechange', (event: EventManagerDTO) => {
+    peerWindowConnection.on('icegatheringstatechange', (event: WindowRTCEvent) => {
       console.log('Ice gathering state change:', event.payload.currentTarget.iceGatheringState);
       ipcSend(
         'log',
@@ -121,7 +121,7 @@ const listenPeerConnection = () => {
       );
     });
 
-    peerWindowConnection.on('negotiationneeded', (event: EventManagerDTO) => {
+    peerWindowConnection.on('negotiationneeded', (event: WindowRTCEvent) => {
       console.log('Negotiation needed:', event.payload.currentTarget.signalingState);
       ipcSend(
         'log',
@@ -134,7 +134,7 @@ const listenPeerConnection = () => {
       );
     });
 
-    peerWindowConnection.on('signalingstatechange', (event: EventManagerDTO) => {
+    peerWindowConnection.on('signalingstatechange', (event: WindowRTCEvent) => {
       console.log('Signaling state change:', event.payload.currentTarget.signalingState);
       ipcSend(
         'log',
@@ -147,7 +147,7 @@ const listenPeerConnection = () => {
       );
     });
 
-    peerWindowConnection.on('track', (event: EventManagerDTO) => {
+    peerWindowConnection.on('track', (event: WindowRTCEvent) => {
       console.error('Track should not be added in sender window.', event);
       ipcSend(
         'track',
@@ -160,7 +160,7 @@ const listenPeerConnection = () => {
       );
     });
 
-    peerWindowConnection.on('request-offer', (event: EventManagerDTO) => {
+    peerWindowConnection.on('request-offer', (event: WindowRTCEvent) => {
       console.log('Offer was requested.');
       ipcSend(
         'log',
@@ -172,7 +172,7 @@ const listenPeerConnection = () => {
       );
     });
 
-    peerWindowConnection.on('sent-offer', (event: EventManagerDTO) => {
+    peerWindowConnection.on('sent-offer', (event: WindowRTCEvent) => {
       console.log('Offer was sent.');
       ipcSend(
         'log',
@@ -184,7 +184,7 @@ const listenPeerConnection = () => {
       );
     });
 
-    peerWindowConnection.on('received-offer', (event: EventManagerDTO) => {
+    peerWindowConnection.on('received-offer', (event: WindowRTCEvent) => {
       console.log('Offer was received, answer was sent.');
       ipcSend(
         'log',
@@ -196,7 +196,7 @@ const listenPeerConnection = () => {
       );
     });
 
-    peerWindowConnection.on('received-answer', (event: EventManagerDTO) => {
+    peerWindowConnection.on('received-answer', (event: WindowRTCEvent) => {
       console.log('Answer was received.');
       ipcSend(
         'log',
@@ -208,7 +208,7 @@ const listenPeerConnection = () => {
       );
     });
 
-    peerWindowConnection.on('leave', (event: EventManagerDTO) => {
+    peerWindowConnection.on('leave', (event: WindowRTCEvent) => {
       console.log('Self leave with error', event.payload);
       ipcSend(
         'log',
@@ -221,7 +221,7 @@ const listenPeerConnection = () => {
       );
     });
 
-    peerWindowConnection.on('peer-left', (event: EventManagerDTO) => {
+    peerWindowConnection.on('peer-left', (event: WindowRTCEvent) => {
       console.log('Peer left with error:', event.payload);
       // peerWindowConnection!.dispose();
       // peerWindowConnection = null;

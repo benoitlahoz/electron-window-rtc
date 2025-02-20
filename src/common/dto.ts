@@ -1,9 +1,9 @@
-export interface EventManagerDTO {
+export interface WindowRTCEvent {
   sender: string;
   receiver: string;
   payload: any;
 }
 
-export interface ForwardMessageDTO extends EventManagerDTO {
+export interface ForwardMessageDTO extends WindowRTCEvent {
   channel: string;
 }

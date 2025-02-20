@@ -1,6 +1,6 @@
 import type { IpcRendererEvent } from 'electron';
 import { WindowRTCChannels } from '../common/channels';
-import { EventManagerDTO, ForwardMessageDTO } from '../common/dto';
+import { WindowRTCEvent, ForwardMessageDTO } from '../common/dto';
 
 export interface IpcObject {
   on: (
@@ -43,7 +43,7 @@ type EventManagerChannel = string &
 class EventManager {
   private listeners: Record<
     EventManagerChannel | string,
-    ((data: EventManagerDTO) => void)[]
+    ((data: WindowRTCEvent) => void)[]
   > = {};
 
   public dispose(): void {
@@ -54,7 +54,7 @@ class EventManager {
 
   public on(
     channel: EventManagerChannel,
-    listener: (data: EventManagerDTO) => void
+    listener: (data: WindowRTCEvent) => void
   ): void {
     if (!this.listeners[channel]) {
       this.listeners[channel] = [];
@@ -65,7 +65,7 @@ class EventManager {
 
   public off(
     channel: EventManagerChannel,
-    listener?: (data: EventManagerDTO) => void
+    listener?: (data: WindowRTCEvent) => void
   ): void {
     if (this.listeners[channel]) {
       if (listener) {
@@ -80,7 +80,7 @@ class EventManager {
     }
   }
 
-  protected emit(channel: EventManagerChannel, data: EventManagerDTO): void {
+  protected emit(channel: EventManagerChannel, data: WindowRTCEvent): void {
     if (this.listeners['*']) {
       // Emit all events.
       for (const listener of this.listeners['*']) {
