@@ -6,8 +6,8 @@ export default {
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue';
+import type { WindowRTCEvent } from '../../../../../src/renderer';
 import { WindowRTCPeerConnection, defineIpc } from '../../../../../src/renderer';
-import type { WindowRTCEvent } from '../../../../../src/common/dto';
 
 defineIpc(window.electron.ipcRenderer);
 
