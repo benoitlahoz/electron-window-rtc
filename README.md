@@ -12,7 +12,7 @@ This package was primarily released to handle video/canvas manipulation before s
 
 ### Donate
 
-If you find this package useful, contribute to my Open-Source work by donating here! Thank you!
+If you find this package useful, contribute to the author's open source work by donating here! Thank you!
 
 [![paypal](https://img.shields.io/badge/contribute-Paypal-2ea44f)](https://www.paypal.com/donate/?hosted_button_id=C2ABZ3KBUXF92)
 
