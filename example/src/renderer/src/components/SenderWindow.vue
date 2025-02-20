@@ -8,6 +8,7 @@ export default {
 import { onMounted, onBeforeUnmount, ref } from 'vue';
 import type { WindowRTCEvent } from '../../../../../src/renderer';
 import { WindowRTCPeerConnection, defineIpc } from '../../../../../src/renderer';
+import SpeakerIcon from '../assets/speaker-icon.svg';
 
 defineIpc(window.electron.ipcRenderer);
 
@@ -16,6 +17,10 @@ const ipcSend = window.electron.ipcRenderer.send;
 let peerWindowConnection: WindowRTCPeerConnection | null = null;
 const canvasRef = ref<HTMLCanvasElement | undefined>();
 let requestId = -1;
+
+const speakersEnabled = ref(false);
+let context: AudioContext;
+let oscillator: OscillatorNode;
 
 onMounted(async () => {
   if (peerWindowConnection) {
@@ -39,9 +44,79 @@ onMounted(async () => {
     throw new Error(`Canvas may not be mounted yet on '${peerWindowConnection.name}'`);
   }
 
-  draw();
-  peerWindowConnection.addStream(canvas.captureStream(240)); // Important: if framerate is left empty latency occurs.
+  // ---- Create and connect the oscillator ----
+
+  context = new AudioContext();
+
+  // This will be our
+  const peer = context.createMediaStreamDestination();
+
+  oscillator = context.createOscillator();
+  oscillator.type = 'sine';
+  oscillator.frequency.value = 110;
+
+  const imag = new Float32Array([0, 0, 1, 0, 1]); // sine
+  const real = new Float32Array(imag.length); // cos
+  const customWave = context.createPeriodicWave(real, imag);
+  oscillator.setPeriodicWave(customWave);
+  oscillator.connect(peer); // Will be added to final stream.
+  oscillator.start(context.currentTime);
+
+  // ---- First draw of the canvas ----
+
+  draw(); // Important: begin to draw before capturing.
+
+  // ---- Create the final stream ----
+
+  const stream = new MediaStream();
+  stream.addTrack(canvas.captureStream(240).getVideoTracks()[0]); // Important: if framerate in `captureStream` is left empty latency occurs.
+  stream.addTrack(peer.stream.getAudioTracks()[0]);
+
+  peerWindowConnection.addStream(stream);
 });
+
+const enableAudio = (value: boolean) => {
+  speakersEnabled.value = value;
+
+  if (context && oscillator) {
+    if (speakersEnabled.value) {
+      oscillator.connect(context.destination);
+    } else {
+      oscillator.disconnect(context.destination);
+    }
+  }
+};
+
+let angle = 0;
+const draw = () => {
+  const canvas = canvasRef.value;
+  if (!canvas) {
+    throw new Error(`Canvas may not be mounted.`);
+  }
+
+  angle = (angle + 1) % 360;
+
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = 'white';
+
+  ctx.save();
+
+  ctx.translate(200, 200);
+  ctx.rotate((angle * Math.PI) / 180); // Then do the actual rotation.
+
+  ctx.beginPath();
+  ctx.arc(50, 50, 40, 0, 2 * Math.PI);
+
+  ctx.fill();
+
+  ctx.restore();
+
+  ctx.font = '12px Verdana';
+  ctx.fillText(`${performance.now().toFixed(2)}`, 16, 400 - 16);
+
+  requestId = requestAnimationFrame(draw);
+};
 
 onBeforeUnmount(() => {
   if (peerWindowConnection) {
@@ -238,38 +313,6 @@ const listenPeerConnection = () => {
     });
   }
 };
-
-let angle = 0;
-
-const draw = () => {
-  const canvas = canvasRef.value;
-  if (!canvas) {
-    throw new Error(`Canvas may not be mounted.`);
-  }
-
-  angle = (angle + 1) % 360;
-
-  const ctx = canvas.getContext('2d')!;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = 'white';
-
-  ctx.save();
-
-  ctx.translate(200, 200);
-  ctx.rotate((angle * Math.PI) / 180); // Then do the actual rotation.
-
-  ctx.beginPath();
-  ctx.arc(50, 50, 40, 0, 2 * Math.PI);
-
-  ctx.fill();
-
-  ctx.restore();
-
-  ctx.font = '12px Verdana';
-  ctx.fillText(`${performance.now().toFixed(2)}`, 16, 400 - 16);
-
-  requestId = requestAnimationFrame(draw);
-};
 </script>
 
 <template lang="pug">
@@ -279,7 +322,17 @@ const draw = () => {
   ).titlebar
     .flex-1
     .flex-1.flex.justify-center.items-center Sender 
-    .flex-1
+    .flex-1.flex.items-center.justify-end.pr-4
+      .audio-icon.text-primary.z-10(
+        v-if="speakersEnabled",
+        @click="enableAudio(false)"
+      )
+        speaker-icon
+      .audio-icon.opacity-50.z-10(
+        v-else,
+        @click="enableAudio(true)"
+      )
+        speaker-icon
   .w-full.flex-1
     canvas(
       ref="canvasRef",
@@ -287,3 +340,14 @@ const draw = () => {
       height="400"
     ).h-full
 </template>
+
+<style>
+.audio-icon {
+  -webkit-app-region: no-drag;
+}
+
+.audio-icon:hover {
+  opacity: 1;
+  color: white;
+}
+</style>

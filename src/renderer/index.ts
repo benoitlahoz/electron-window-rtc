@@ -248,6 +248,7 @@ export class WindowRTCPeerConnection extends WindowRTCEventEmitter {
   }
 
   public async addStream(stream: MediaStream): Promise<void> {
+    // TODO: check addTransceiver (https://stackoverflow.com/a/60748084/1060921)
     for (const track of stream.getTracks()) {
       this.connection.addTrack(track, stream);
     }

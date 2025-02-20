@@ -47,6 +47,7 @@ If you find this package useful, contribute to the author's open source work by 
   - [Using `canvas`](#using-canvas)
     - [Setting `frameRequestRate`](#setting-framerequestrate)
     - [Without setting `frameRequestRate`](#without-setting-framerequestrate)
+  - [Using WebAudio API](#using-webaudio-api)
   - [Known Issues](#known-issues)
   - [License](#license)
 
@@ -339,6 +340,14 @@ When using `canvas` to get an image to send to other windows, application should
 ![alt bad_performance](https://github.com/benoitlahoz/electron-window-rtc/blob/main/assets/electron-demo.jpg)
 
 **Fig. 2:** _Without setting `frameRequestRate`: a latency of ~30ms is induced._
+
+## Using WebAudio API
+
+See [Example `SenderWindow`](https://github.com/benoitlahoz/electron-window-rtc/blob/main/example/src/renderer/src/components/SenderWindow.vue) and [`ReceiverWindow`](https://github.com/benoitlahoz/electron-window-rtc/blob/main/example/src/renderer/src/components/ReceiverWindow.vue) for the setup of the final stream.
+
+![alt with_audio](https://github.com/benoitlahoz/electron-window-rtc/blob/main/assets/electron-demo-audio.jpg)
+
+**Fig. 3:** _Sending audio for visualization with or without playing it in the `Sender` window._
 
 ## Known Issues
 
