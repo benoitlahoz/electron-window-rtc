@@ -204,7 +204,7 @@ When using `canvas` to get an image to send to other windows, application should
 
 **Fig. 1:** _`const stream = canvas.captureStream(240);` in `Sender` window doesn't induce latency. Look at the result of `performance.now()` sent by the `Sender`._
 
-### Withour setting `frameRequestRate`
+### Without setting `frameRequestRate`
 
 ![alt bad_performance](https://github.com/benoitlahoz/electron-window-rtc/blob/main/assets/electron-demo.jpg)
 
