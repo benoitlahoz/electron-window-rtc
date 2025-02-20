@@ -6,8 +6,8 @@ export default {
 
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref } from 'vue';
-import type { WindowRTCEvent } from '../../../../../src/renderer';
 import { WindowRTCPeerConnection, defineIpc } from '../../../../../src/renderer';
+import { createLogger } from './logger';
 import SpeakerIcon from '../assets/speaker-icon.svg';
 
 defineIpc(window.electron.ipcRenderer);
@@ -21,6 +21,8 @@ let requestId = -1;
 const speakersEnabled = ref(false);
 let context: AudioContext;
 let oscillator: OscillatorNode;
+const frequency = ref(110);
+const bubbleRef = ref<HTMLElement | undefined>();
 
 onMounted(async () => {
   if (peerWindowConnection) {
@@ -37,23 +39,25 @@ onMounted(async () => {
       remote: 'Receiver',
     }),
   );
-  listenPeerConnection();
+
+  // Generic message passing to main process for this connection.
+  createLogger(peerWindowConnection);
 
   const canvas = canvasRef.value;
   if (!canvas) {
     throw new Error(`Canvas may not be mounted yet on '${peerWindowConnection.name}'`);
   }
 
-  // ---- Create and connect the oscillator ----
+  // Position sliders bubble.
+  positionBubble();
+
+  // ---- Create and connect audio ----
 
   context = new AudioContext();
-
-  // This will be our
   const peer = context.createMediaStreamDestination();
-
   oscillator = context.createOscillator();
   oscillator.type = 'sine';
-  oscillator.frequency.value = 110;
+  oscillator.frequency.value = frequency.value;
 
   const imag = new Float32Array([0, 0, 1, 0, 1]); // sine
   const real = new Float32Array(imag.length); // cos
@@ -87,6 +91,22 @@ const enableAudio = (value: boolean) => {
   }
 };
 
+const onFrequencyChange = (event: InputEvent) => {
+  const value = (event.currentTarget as any).value;
+  frequency.value = value;
+  oscillator.frequency.value = frequency.value;
+  positionBubble();
+};
+
+const positionBubble = () => {
+  const bubble = bubbleRef.value;
+  if (bubble) {
+    const percents = ((frequency.value - 50) * 100) / (420 - 50);
+    const pos = 15 - 16 - percents * 0.6;
+    bubble.style.left = `calc(${percents}% + ${pos}px)`;
+  }
+};
+
 let angle = 0;
 const draw = () => {
   const canvas = canvasRef.value;
@@ -94,7 +114,8 @@ const draw = () => {
     throw new Error(`Canvas may not be mounted.`);
   }
 
-  angle = (angle + 1) % 360;
+  const percents = ((frequency.value - 50) * 100) / (420 - 50);
+  angle = (angle + 0.1 * (percents + 5)) % 360;
 
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -103,7 +124,7 @@ const draw = () => {
   ctx.save();
 
   ctx.translate(200, 200);
-  ctx.rotate((angle * Math.PI) / 180); // Then do the actual rotation.
+  ctx.rotate((angle * Math.PI) / 180);
 
   ctx.beginPath();
   ctx.arc(50, 50, 40, 0, 2 * Math.PI);
@@ -112,8 +133,8 @@ const draw = () => {
 
   ctx.restore();
 
-  ctx.font = '12px Verdana';
-  ctx.fillText(`${performance.now().toFixed(2)}`, 16, 400 - 16);
+  ctx.font = '12px Monospace';
+  ctx.fillText(`performance.now(): ${performance.now().toFixed(2)}`, 16, 400 - 16);
 
   requestId = requestAnimationFrame(draw);
 };
@@ -128,191 +149,9 @@ onBeforeUnmount(() => {
     cancelAnimationFrame(requestId);
     requestId = -1;
   }
+
+  context.close();
 });
-
-const listenPeerConnection = () => {
-  if (peerWindowConnection) {
-    peerWindowConnection.on('error', (event: WindowRTCEvent) => {
-      console.log('An error occurred.', event.payload);
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'error',
-          local: event.local,
-          remote: event.remote,
-          payload: event.payload,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('icecandidate', (event: WindowRTCEvent) => {
-      console.log('Received ice candidate.');
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'icecandidate',
-          local: event.local,
-          remote: event.remote,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('iceconnectionstatechange', (event: WindowRTCEvent) => {
-      console.log('Ice connection state change:', event.payload.currentTarget.iceConnectionState);
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'iceconnectionstatechange',
-          local: event.local,
-          remote: event.remote,
-          payload: event.payload.currentTarget.iceConnectionState,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('icecandidateerror', (event: WindowRTCEvent) => {
-      console.log('Ice candidate error:', event.payload.errorText);
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'icecandidateerror',
-          local: event.local,
-          remote: event.remote,
-          payload: event.payload.errorText,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('icegatheringstatechange', (event: WindowRTCEvent) => {
-      console.log('Ice gathering state change:', event.payload.currentTarget.iceGatheringState);
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'icegatheringstatechange',
-          local: event.local,
-          remote: event.remote,
-          payload: event.payload.currentTarget.iceGatheringState,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('negotiationneeded', (event: WindowRTCEvent) => {
-      console.log('Negotiation needed:', event.payload.currentTarget.signalingState);
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'negotiationneeded',
-          local: event.local,
-          remote: event.remote,
-          payload: event.payload.currentTarget.signalingState,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('signalingstatechange', (event: WindowRTCEvent) => {
-      console.log('Signaling state change:', event.payload.currentTarget.signalingState);
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'signalingstatechange',
-          local: event.local,
-          remote: event.remote,
-          payload: event.payload.currentTarget.signalingState,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('track', (event: WindowRTCEvent) => {
-      console.error('Track should not be added in local window.', event);
-      ipcSend(
-        'track',
-        JSON.stringify({
-          channel: 'signalingstatechange',
-          local: event.local,
-          remote: event.remote,
-          payload: new Error('Track should not be added in local window.'),
-        }),
-      );
-    });
-
-    peerWindowConnection.on('request-offer', (event: WindowRTCEvent) => {
-      console.log('Offer was requested.');
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'request-offer',
-          local: event.local,
-          remote: event.remote,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('sent-offer', (event: WindowRTCEvent) => {
-      console.log('Offer was sent.');
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'sent-offer',
-          local: event.local,
-          remote: event.remote,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('received-offer', (event: WindowRTCEvent) => {
-      console.log('Offer was received, answer was sent.');
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'received-offer',
-          local: event.local,
-          remote: event.remote,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('received-answer', (event: WindowRTCEvent) => {
-      console.log('Answer was received.');
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'received-answer',
-          local: event.local,
-          remote: event.remote,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('leave', (event: WindowRTCEvent) => {
-      console.log('Self leave with error', event.payload);
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'leave',
-          local: event.local,
-          remote: event.remote,
-          payload: event.payload,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('peer-left', (event: WindowRTCEvent) => {
-      console.log('Peer left with error:', event.payload);
-      // peerWindowConnection!.dispose();
-      // peerWindowConnection = null;
-
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'peer-left',
-          local: event.local,
-          remote: event.remote,
-          payload: event.payload,
-        }),
-      );
-    });
-  }
-};
 </script>
 
 <template lang="pug">
@@ -333,12 +172,29 @@ const listenPeerConnection = () => {
         @click="enableAudio(true)"
       )
         speaker-icon
-  .w-full.flex-1
+  .w-full.flex-1.relative
     canvas(
       ref="canvasRef",
       width="400",
       height="400"
-    ).h-full
+    ).h-full.absolute.top-0.left-0
+    .absolute.top-0.p-4.w-full
+      label(
+        for="freq"
+      ).text-sm Audio Frequency
+      <!-- @vue-ignore -->
+      input(
+        id="freq",
+        type="range",
+        :min="50",
+        :max="420",
+        :value="frequency",
+        @input="onFrequencyChange"
+      ).w-full.slider
+      .bubble.absolute.w-16.flex.justify-center.text-xs.rounded.px-2.py-1.bg-background-darker(
+        ref="bubbleRef",
+        class="top-[4.25rem]"
+      ) {{ frequency }} Hz
 </template>
 
 <style>
@@ -349,5 +205,36 @@ const listenPeerConnection = () => {
 .audio-icon:hover {
   opacity: 1;
   color: white;
+}
+
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 5px;
+  outline: none;
+  border-radius: 999px;
+  background: hsl(var(--background-dark));
+}
+
+.slider:hover {
+  background: hsl(var(--primary-dark));
+}
+
+.slider:hover.slider::-webkit-slider-thumb {
+  background: hsl(var(--primary)); /* Green background */
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none; /* Override default look */
+  appearance: none;
+  width: 15px; /* Set a specific slider handle width */
+  height: 15px; /* Slider handle height */
+  border-radius: 999px;
+  background: hsl(var(--background-darker)); /* Green background */
+  cursor: pointer; /* Cursor on hover */
+}
+
+.slider::-webkit-slider-thumb:hover {
+  background: hsl(var(--primary)); /* Green background */
 }
 </style>

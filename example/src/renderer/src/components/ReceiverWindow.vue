@@ -8,6 +8,7 @@ export default {
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import type { WindowRTCEvent } from '../../../../../src/renderer';
 import { WindowRTCPeerConnection, defineIpc } from '../../../../../src/renderer';
+import { createLogger } from './logger';
 
 defineIpc(window.electron.ipcRenderer);
 
@@ -31,6 +32,9 @@ onMounted(async () => {
     peerWindowConnection = null;
   }
   peerWindowConnection = await WindowRTCPeerConnection.with('Sender');
+
+  // Generic message passing to main process for this connection.
+  createLogger(peerWindowConnection);
 
   // Listen to track from sender window.
 
@@ -66,19 +70,13 @@ onMounted(async () => {
           const audioStream = new MediaStream([audioTracks[0]]);
           const audioSource = context.createMediaStreamSource(audioStream);
           analyser = context.createAnalyser();
-
-          audioSource.connect(analyser);
-          // analyser.connect(context.destination);
-
           analyser.fftSize = 2048;
 
-          // This works.
-          // srcStream.addTrack(audioTracks[0]);
+          audioSource.connect(analyser);
+
           audio.srcObject = audioStream;
           audio.muted = true;
         }
-
-        // video.srcObject = stream;
       }
 
       video.onloadstart = () => {
@@ -103,10 +101,6 @@ onMounted(async () => {
       }),
     );
   });
-
-  // Forward logs to `Console`.
-
-  listenPeerConnection();
 
   console.log('Window name:', peerWindowConnection.name);
   ipcSend(
@@ -173,177 +167,6 @@ const clean = () => {
     peerWindowConnection = null;
   }
 };
-
-const listenPeerConnection = () => {
-  if (peerWindowConnection) {
-    peerWindowConnection.on('error', (event: WindowRTCEvent) => {
-      console.log('An error occurred.', event.payload);
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'error',
-          local: event.local,
-          remote: event.remote,
-          payload: event.payload,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('icecandidate', (event: WindowRTCEvent) => {
-      console.log('Received ice candidate.');
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'icecandidate',
-          local: event.local,
-          remote: event.remote,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('iceconnectionstatechange', (event: WindowRTCEvent) => {
-      console.log('Ice connection state change:', event.payload.currentTarget.iceConnectionState);
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'iceconnectionstatechange',
-          local: event.local,
-          remote: event.remote,
-          payload: event.payload.currentTarget.iceConnectionState,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('icecandidateerror', (event: WindowRTCEvent) => {
-      console.log('Ice candidate error:', event.payload.errorText);
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'icecandidateerror',
-          local: event.local,
-          remote: event.remote,
-          payload: event.payload.errorText,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('icegatheringstatechange', (event: WindowRTCEvent) => {
-      console.log('Ice gathering state change:', event.payload.currentTarget.iceGatheringState);
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'icegatheringstatechange',
-          local: event.local,
-          remote: event.remote,
-          payload: event.payload.currentTarget.iceGatheringState,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('negotiationneeded', (event: WindowRTCEvent) => {
-      console.log('Negotiation needed:', event.payload.currentTarget.signalingState);
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'negotiationneeded',
-          local: event.local,
-          remote: event.remote,
-          payload: event.payload.currentTarget.signalingState,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('signalingstatechange', (event: WindowRTCEvent) => {
-      console.log('Signaling state change:', event.payload.currentTarget.signalingState);
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'signalingstatechange',
-          local: event.local,
-          remote: event.remote,
-          payload: event.payload.currentTarget.signalingState,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('request-offer', (event: WindowRTCEvent) => {
-      console.log('Offer was requested.');
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'request-offer',
-          local: event.local,
-          remote: event.remote,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('sent-offer', (event: WindowRTCEvent) => {
-      console.log('Offer was sent.');
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'sent-offer',
-          local: event.local,
-          remote: event.remote,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('received-offer', (event: WindowRTCEvent) => {
-      console.log('Offer was received, answer was sent.');
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'received-offer',
-          local: event.local,
-          remote: event.remote,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('received-answer', (event: WindowRTCEvent) => {
-      console.log('Answer was received.');
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'received-answer',
-          local: event.local,
-          remote: event.remote,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('leave', (event: WindowRTCEvent) => {
-      console.log('Self leave with error', event.payload);
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'leave',
-          local: event.local,
-          remote: event.remote,
-          payload: event.payload,
-        }),
-      );
-    });
-
-    peerWindowConnection.on('peer-left', (event: WindowRTCEvent) => {
-      console.log('Peer left with error:', event.payload);
-      // peerWindowConnection!.dispose();
-      // peerWindowConnection = null;
-
-      ipcSend(
-        'log',
-        JSON.stringify({
-          channel: 'peer-left',
-          local: event.local,
-          remote: event.remote,
-          payload: event.payload,
-        }),
-      );
-    });
-  }
-};
 </script>
 
 <template lang="pug">
@@ -364,7 +187,7 @@ const listenPeerConnection = () => {
       :autoplay="true",
       :plays-inline="true",
     ).h-full.absolute.top-0
-    .absolute.bottom-0.pb-12
+    .absolute.top-8.pb-12
       canvas(
         v-show="loading === false",
         ref="canvasRef",

@@ -351,7 +351,8 @@ See [Example `SenderWindow`](https://github.com/benoitlahoz/electron-window-rtc/
 
 ## Known Issues
 
-- In the Electron example provided, reloading `Sender` window takes a lot of time for `Receiver` window to reconnect, whereas the `requestOffer` method allows reconnecting quickly on `Receiver` window's reload.
+- Electron example doesn't handle very well reloading windows and introduces latency. **We may explore recreating stream on reload.**
+- Reloading `Sender` window takes a lot of time for `Receiver` window to reconnect, whereas the `requestOffer` method allows reconnecting quickly on `Receiver` window's reload.
 - Closing and opening again windows has not been tested: it may involve some logic in the `main process` to be integrated in `WindowRTCMain`.
 
 ## License

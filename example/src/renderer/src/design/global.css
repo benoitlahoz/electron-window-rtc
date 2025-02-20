@@ -28,7 +28,8 @@ body,
     --border: 240 3.4% 20%;
     --input: 240 3.4% 20%;
 
-    --primary: 210 70% 70%;
+    --primary: 210 70% 50%;
+    --primary-dark: 210 70% 30%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
     --secondary: 217.2 32.6% 17.5%;
