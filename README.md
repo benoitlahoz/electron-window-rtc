@@ -327,7 +327,7 @@ windowConnection.on('track', (event: WindowRTCEvent) => {
 
 ## Using `canvas`
 
-When using `canvas` to get an image to send to other windows, application should set the `frameRequestRate` parameter of `canvas.captureStream` to a high framerate to avoid latency at the receiver side.
+When using `canvas` to get an image to send to other windows, application should set the `frameRequestRate` parameter of `canvas.captureStream` to a high framerate to avoid latency on the receiver side.
 
 ### Setting `frameRequestRate`
 
@@ -343,7 +343,7 @@ When using `canvas` to get an image to send to other windows, application should
 
 ## Using WebAudio API
 
-See [Example `SenderWindow`](https://github.com/benoitlahoz/electron-window-rtc/blob/main/example/src/renderer/src/components/SenderWindow.vue) and [`ReceiverWindow`](https://github.com/benoitlahoz/electron-window-rtc/blob/main/example/src/renderer/src/components/ReceiverWindow.vue) for the setup of the final stream.
+See example's [`SenderWindow`](https://github.com/benoitlahoz/electron-window-rtc/blob/main/example/src/renderer/src/components/SenderWindow.vue) and [`ReceiverWindow`](https://github.com/benoitlahoz/electron-window-rtc/blob/main/example/src/renderer/src/components/ReceiverWindow.vue) for the setup of the final stream.
 
 ![alt with_audio](https://github.com/benoitlahoz/electron-window-rtc/blob/main/assets/electron-demo-audio.jpg)
 
