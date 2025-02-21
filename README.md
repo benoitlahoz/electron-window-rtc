@@ -19,7 +19,7 @@ If you find this package useful, contribute to the author's open source work by 
 ## Table of Contents
 
 - [electron-window-rtc](#electron-window-rtc)
-    - [Donate](#donate)
+  - [Donate](#donate)
   - [Table of Contents](#table-of-contents)
   - [Install](#install)
   - [Usage](#usage)
@@ -156,6 +156,7 @@ Registers a `BrowserWindow` for message passing with a unique name.
 | `window` | `BrowserWindow` | `undefined` | false    |
 
 **Returns** `void`
+
 **Throws** `Error` if a window with this name or this window has already been registered.
 
 #### `WindowRTCMain.unregister`
@@ -169,6 +170,7 @@ Unregister a `BrowserWindow` from message passing.
 | `name` | `string` | `undefined` | false    |
 
 **Returns** `void`
+
 **Throws** `Error` if a window with this name doesn't exist.
 
 #### `WindowRTCMain.dispose`
@@ -204,6 +206,7 @@ Create a `WindowRTCPeerConnection` with window of given name.
 | `name` | `string` | `undefined` | false    |
 
 **Returns** `Promise<WindowRTCPeerConnection>` An instance of `WindowRTCPeerConnection`.
+
 **Throws** `Error` if `IpcObject` was not defined with `defineIpc`, or if the window with `name` was not registered, or if this window was not registered.
 
 #### `windowPeerConnectionInstance.addStream`
