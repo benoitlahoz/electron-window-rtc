@@ -16,7 +16,7 @@
     "interprocess-communication"
   ],
   "main": "./dist/electron-window-rtc-main.mjs",
-  "types": "./dist/src/main/index.d.ts",
+  "types": "./dist/main/index.d.ts",
   "author": "Benoît Lahoz <info@benoitlahoz.io>",
   "repository": {
     "type": "git",
@@ -26,11 +26,11 @@
   "private": false,
   "exports": {
     ".": {
-      "types": "./dist/src/main/index.d.ts",
+      "types": "./dist/main/index.d.ts",
       "import": "./dist/electron-window-rtc-main.mjs"
     },
     "./renderer": {
-      "types": "./dist/src/main/index.d.ts",
+      "types": "./dist/renderer/index.d.ts",
       "import": "./dist/electron-window-rtc-renderer.mjs"
     }
   },
