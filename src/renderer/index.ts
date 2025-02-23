@@ -256,6 +256,7 @@ export class WindowRTCPeerConnection extends WindowRTCEventEmitter {
     const offer = await this.connection.createOffer();
 
     this.connection.setLocalDescription(offer);
+    // this.connection.setLocalDescription(off);
 
     const err = await Ipc.invoke(WindowRTCIpcChannel.Signal, {
       channel: 'offer',
@@ -345,7 +346,25 @@ export class WindowRTCPeerConnection extends WindowRTCEventEmitter {
 
     this.connection.setRemoteDescription(offer);
 
-    const answer = await this.connection.createAnswer();
+    let answer = await this.connection.createAnswer();
+
+    // Bitrate: https://stackoverflow.com/a/57674478/1060921
+    // TODO: A soption.
+    const arr = answer!.sdp!.split('\r\n');
+    arr.forEach((str, i) => {
+      if (/^a=fmtp:\d*/.test(str)) {
+        arr[i] =
+          str +
+          ';x-google-max-bitrate=100000;x-google-min-bitrate=0;x-google-start-bitrate=60000';
+      } else if (/^a=mid:(1|video)/.test(str)) {
+        arr[i] += '\r\nb=AS:10000';
+      }
+    });
+    answer = new RTCSessionDescription({
+      type: 'answer',
+      sdp: arr.join('\r\n'),
+    });
+
     await this.connection.setLocalDescription(answer);
 
     const err = await Ipc.invoke(WindowRTCIpcChannel.Signal, {
