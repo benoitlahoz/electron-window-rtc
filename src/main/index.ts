@@ -93,9 +93,7 @@ class _WindowRTCMain {
     );
 
     if (!existing) {
-      throw new Error(
-        `Window with name '${cleanName}' was not registered and can't be unregistered.`
-      );
+      return;
     }
 
     for (const registered of this.registeredWindows) {

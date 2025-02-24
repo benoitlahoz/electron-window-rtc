@@ -19,7 +19,7 @@ If you find this package useful, contribute to the author's open source work by 
 ## Table of Contents
 
 - [electron-window-rtc](#electron-window-rtc)
-  - [Donate](#donate)
+    - [Donate](#donate)
   - [Table of Contents](#table-of-contents)
   - [Install](#install)
   - [Usage](#usage)
@@ -161,7 +161,7 @@ Registers a `BrowserWindow` for message passing with a unique name.
 
 #### `WindowRTCMain.unregister`
 
-Unregister a `BrowserWindow` from message passing.
+Unregister a `BrowserWindow` from message passing. Fails silently if window can not be found.
 
 **Parameters**
 
@@ -170,8 +170,6 @@ Unregister a `BrowserWindow` from message passing.
 | `name` | `string` | `undefined` | false    |
 
 **Returns** `void`
-
-**Throws** `Error` if a window with this name doesn't exist.
 
 #### `WindowRTCMain.dispose`
 
@@ -215,9 +213,10 @@ Add a stream to send to connected window and create an `offer` sent to receiving
 
 **Parameters**
 
-| Name     | Type          | Default     | Optional |
-| -------- | ------------- | ----------- | -------- |
-| `stream` | `MediaStream` | `undefined` | false    |
+| Name         | Type                                | Default                | Optional |
+| ------------ | ----------------------------------- | ---------------------- | -------- |
+| `stream`     | `MediaStream`                       | `undefined`            | false    |
+| `maxBitrate` | `{ audio: number; video: number; }` | `5000` (Kbps) for both | true     |
 
 **Returns** `Promise<void>`
 

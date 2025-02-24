@@ -144,6 +144,7 @@ export class WindowRTCPeerConnection extends WindowRTCEventEmitter {
   }
 
   public readonly connection: RTCPeerConnection;
+  private senderStream?: MediaStream;
 
   private _signalCallback: (
     event: IpcRendererEvent,
@@ -247,16 +248,61 @@ export class WindowRTCPeerConnection extends WindowRTCEventEmitter {
     super.dispose();
   }
 
-  public async addStream(stream: MediaStream): Promise<void> {
+  /*
+  public async addTrack(
+    track: MediaStreamTrack,
+    constraints?: MediaTrackConstraints
+  ): Promise<void> {
+    if (constraints) {
+      track.applyConstraints(constraints);
+    }
+  }
+  */
+  public async addStream(
+    stream: MediaStream,
+    maxBitrate: {
+      audio: number;
+      video: number;
+    } = {
+      audio: 5000,
+      video: 5000,
+    }
+  ): Promise<void> {
     // TODO: check addTransceiver (https://stackoverflow.com/a/60748084/1060921)
+    if (!this.senderStream) {
+      this.senderStream = new MediaStream();
+    }
+
     for (const track of stream.getTracks()) {
-      this.connection.addTrack(track, stream);
+      this.connection.addTrack(track, this.senderStream);
     }
 
     const offer = await this.connection.createOffer();
 
     this.connection.setLocalDescription(offer);
-    // this.connection.setLocalDescription(off);
+
+    const senders = this.connection.getSenders();
+    for (const sender of senders) {
+      if (sender.track) {
+        if (maxBitrate.video && sender.track.kind === 'video') {
+          const parameters = sender.getParameters();
+          for (const encoding of parameters.encodings) {
+            encoding.maxBitrate = /* Kbps */ maxBitrate.video * /* Mbps */ 1000;
+          }
+          sender.setParameters(parameters);
+          continue;
+        }
+
+        if (maxBitrate.audio && sender.track.kind === 'audio') {
+          const parameters = sender.getParameters();
+          for (const encoding of parameters.encodings) {
+            encoding.maxBitrate = /* Kbps */ maxBitrate.audio * /* Mbps */ 1000;
+          }
+          sender.setParameters(parameters);
+          continue;
+        }
+      }
+    }
 
     const err = await Ipc.invoke(WindowRTCIpcChannel.Signal, {
       channel: 'offer',
@@ -284,6 +330,10 @@ export class WindowRTCPeerConnection extends WindowRTCEventEmitter {
     }
 
     this.dispatch('request-offer');
+  }
+
+  public get stream(): MediaStream | undefined {
+    return this.senderStream;
   }
 
   private async signalCallback(
@@ -349,10 +399,10 @@ export class WindowRTCPeerConnection extends WindowRTCEventEmitter {
     let answer = await this.connection.createAnswer();
 
     // Bitrate: https://stackoverflow.com/a/57674478/1060921
-    // TODO: A soption.
-    const arr = answer!.sdp!.split('\r\n');
-    arr.forEach((str, i) => {
-      if (/^a=fmtp:\d*/.test(str)) {
+    // const arr = answer!.sdp!.split('\r\n');
+    // arr.forEach((str, i) => {
+    //  if (/^a=fmtp:\d*/.test(str)) {
+    /*
         arr[i] =
           str +
           ';x-google-max-bitrate=100000;x-google-min-bitrate=0;x-google-start-bitrate=60000';
@@ -364,7 +414,7 @@ export class WindowRTCPeerConnection extends WindowRTCEventEmitter {
       type: 'answer',
       sdp: arr.join('\r\n'),
     });
-
+    */
     await this.connection.setLocalDescription(answer);
 
     const err = await Ipc.invoke(WindowRTCIpcChannel.Signal, {
